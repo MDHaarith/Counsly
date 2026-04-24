@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,11 +26,11 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    @property
+    @cached_property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
-    @property
+    @cached_property
     def trusted_host_list(self) -> list[str]:
         return [host.strip() for host in self.trusted_hosts.split(",") if host.strip()]
 
