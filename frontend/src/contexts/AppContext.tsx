@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext } from 'react';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface AppState {
   // placeholder — will be expanded with real state
 }
