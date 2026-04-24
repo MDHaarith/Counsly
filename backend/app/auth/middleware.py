@@ -1,6 +1,7 @@
 """FastAPI dependency for extracting the current authenticated user."""
 
 from fastapi import Request, HTTPException, status
+from app.auth.session import verify_session
 
 
 async def get_current_user(request: Request) -> dict:
@@ -9,8 +10,21 @@ async def get_current_user(request: Request) -> dict:
     Expects a Bearer token in the Authorization header.
     Raises 401 if missing or invalid.
     """
-    # TODO: extract Bearer token, call verify_session, return user dict
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-    )
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = auth_header.removeprefix("Bearer ")
+    try:
+        payload = await verify_session(token)
+        return payload
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
