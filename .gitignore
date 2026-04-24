@@ -47,6 +47,12 @@ coverage/
 htmlcov/
 .pytest_cache/
 
-# Misc
-*.log
-npm-debug.log*
+# Agent/tool configs (local only)
+.claude/
+.agent/
+.agents/
+skills/
+skills-lock.json
+.impeccable.md
+CLAUDE.md
+edits.md
