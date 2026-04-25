@@ -5,14 +5,18 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from app.config import settings
+from app.config import settings, validate_runtime_settings
+from app.db.connection import close_db_pool, open_db_pool
 from app.routers import auth, choices, config, explore, onboarding, payments, profile, recommendations
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    validate_runtime_settings()
+    await open_db_pool()
     print("Counsly backend starting...")
     yield
+    await close_db_pool()
     print("Counsly backend shutting down...")
 
 

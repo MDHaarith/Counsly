@@ -1241,6 +1241,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 | `workspaces` | Personal Data Environment boundary | `id uuid pk`, unique `app_user_id` | `app_user_id`, `workspace_kind`, `display_name`, `season_year`, `archived_at` |
 | `student_profiles` | Onboarding + canonical student facts | `id uuid pk`, unique `workspace_id` | `workspace_id`, `full_name`, `board`, `district`, `home_district`, `community_quota`, `maths_mark`, `physics_mark`, `chemistry_mark`, `cutoff_mark`, `expected_cutoff_mark`, `official_rank`, `official_community_rank`, `roll_number`, `roll_number_verified_at` |
 | `onboarding_state` | Resume-exact-step state | `id uuid pk`, unique `workspace_id` | `workspace_id`, `current_step`, `is_complete`, `eligible`, `eligibility_reason`, `last_route`, `entered_phase`, `completed_at` |
+| `user_sessions` | Server-side allowlist/revocation store for JWT cookies | `id uuid pk`, unique `jti` | `app_user_id`, `jti`, `token_hash`, `issued_at`, `expires_at`, `revoked_at` |
 | `roll_number_claims` | One-account-per-roll enforcement | `id uuid pk`, unique `(season_year, roll_number)` | `workspace_id`, `season_year`, `roll_number`, `claim_status`, `verified_at`, `conflict_note` |
 
 ## Subscription And Payment Tables

@@ -9,7 +9,7 @@ from psycopg.rows import dict_row
 
 from app.auth.google import get_google_auth_url
 from app.auth.middleware import get_current_user
-from app.auth.session import create_session
+from app.auth.session import create_session, revoke_session
 from app.config import settings
 from app.db.connection import get_db_connection
 from app.db.queries import get_session_context
@@ -124,7 +124,10 @@ async def get_session(user: dict = Depends(get_current_user)) -> SessionUser:
 
 
 @router.post("/logout")
-async def logout(response: Response) -> dict[str, bool]:
+async def logout(request: Request, response: Response) -> dict[str, bool]:
+    token = request.cookies.get(settings.session_cookie_name)
+    if token:
+        await revoke_session(token)
     response.delete_cookie(settings.session_cookie_name)
     return {"ok": True}
 

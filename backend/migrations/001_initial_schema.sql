@@ -96,6 +96,21 @@ CREATE TABLE onboarding_state (
 );
 ALTER TABLE onboarding_state ENABLE ROW LEVEL SECURITY;
 
+CREATE TABLE user_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    app_user_id UUID NOT NULL REFERENCES app_users (id),
+    jti TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    issued_at TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_user_sessions_jti UNIQUE (jti)
+);
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+CREATE INDEX idx_user_sessions_app_user_active ON user_sessions (app_user_id, expires_at) WHERE revoked_at IS NULL;
+
 -- Reference data
 CREATE TABLE colleges (
     college_code TEXT PRIMARY KEY,

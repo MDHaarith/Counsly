@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     google_client_id: str = ""
     google_client_secret: str = ""
-    session_secret: str = "dev-secret-change-in-production"
+    session_secret: str = ""
     session_cookie_name: str = "counsly_session"
     session_ttl_seconds: int = 60 * 60 * 24 * 14
     supabase_url: str = ""
@@ -40,3 +40,10 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def validate_runtime_settings() -> None:
+    """Fail startup on unsafe production-critical configuration."""
+    weak_secrets = {"", "dev-secret-change-in-production", "change-me", "secret"}
+    if settings.session_secret in weak_secrets or len(settings.session_secret) < 32:
+        raise RuntimeError("SESSION_SECRET must be set to a unique value of at least 32 characters")
