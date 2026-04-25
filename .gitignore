@@ -51,6 +51,9 @@ htmlcov/
 .claude/
 .agent/
 .agents/
+.ccb/
+.ccb-requests/
+unwanted/
 skills/
 skills-lock.json
 .impeccable.md

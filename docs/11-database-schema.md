@@ -73,7 +73,7 @@
 | `college_branches` | College-to-branch mapping | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `branch_name`, `active`, `source_file`, `extraction_date` |
 | `community_seats` | Per-college per-branch seat totals | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `oc`, `bc`, `bcm`, `mbc`, `sc`, `sca`, `st`, `total`, `source_file`, `extraction_date` |
 | `cutoff_data` | Historical allotment rows for recommendations and analytics | `id uuid pk` | `season_year`, `round_number`, `aggregate_mark`, `general_rank`, `community_quota`, `source_community_raw`, `college_code`, `branch_code`, `allotted_category`, `application_number`, `source_file` |
-| `rank_lookup` | Pre-computed historical rank band lookup | composite PK `(maths_mark, physics_mark, chemistry_mark)` | `maths_mark`, `physics_mark`, `chemistry_mark`, `rank_min`, `rank_max`, `confidence_label`, `sample_size`, `source_years jsonb`, `method_version`, `is_abstain` |
+| `rank_lookup` | Pre-computed historical rank band lookup | PK `(aggregate_mark)` | `aggregate_mark`, `rank_min`, `rank_max`, `confidence_label`, `sample_size`, `source_years jsonb`, `method_version`, `is_abstain` |
 | `tnea_roll_numbers` | Official rank-list rows and claim lookup | `id uuid pk`, unique `(season_year, application_number)`, nullable unique `(season_year, roll_number)` | `season_year`, `roll_number`, `application_number`, `general_rank`, `aggregate_mark`, `community_quota`, `source_community_raw`, `community_rank`, `candidate_name`, `date_of_birth`, `random_number`, `source_file` |
 | `tfc_locations` | Facilitation centre master | `id uuid pk` | `name`, `district`, `address`, `phone`, `latitude`, `longitude`, `maps_url`, `verified_at`, `source_file` |
 
@@ -115,7 +115,7 @@
 - `student_profiles(workspace_id)`
 - `user_college_preferences(workspace_id, preference_group, priority)`
 - `cutoff_data(season_year, round_number, community_quota, college_code, branch_code)`
-- `rank_lookup(maths_mark, physics_mark, chemistry_mark)`
+- `rank_lookup(aggregate_mark)`
 - `tnea_roll_numbers(season_year, roll_number)`
 - `tnea_roll_numbers(season_year, application_number)`
 - `news_items(status, published_at desc)`

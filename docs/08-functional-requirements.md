@@ -33,13 +33,13 @@ The product does not claim to predict ranks. It provides honest rank guidance gr
 | ID | Requirement |
 |---|---|
 | FR-22a | Rank guidance has two states via `RANK_RELEASED`: before release, show historical rank bands; after release, retire estimates and use official rank only. |
-| FR-22b | **AI Rank Lookup (All Users):** Query `rank_lookup` by (maths, physics, chemistry). Output a historical rank range (`rank_min–rank_max`) and confidence label (High/Medium/Low). This is range-only guidance, not an exact guaranteed rank. No precision language. CBSE/ICSE disclaimer required. |
+| FR-22b | **AI Rank Lookup (All Users):** Query `rank_lookup` by aggregate mark. Output a historical rank range (`rank_min–rank_max`) and confidence label (High/Medium/Low). This is range-only guidance, not an exact guaranteed rank. No precision language. CBSE/ICSE disclaimer required. |
 | FR-22c | **Full Guidance (Paid):** Same range as broad band, plus historical evidence panel (last 3 years), community-wise context, and board context note. No confidence percentage — High/Medium/Low label only. |
 | FR-22d | **Abstain rule:** If <3 data points in marks range across all years, show "Not enough historical data to estimate a reliable range." No band. |
 | FR-22e | **Official-rank-first:** When `RANK_RELEASED=true`, all guidance paths retire. Official rank replaces them for all users. |
 | FR-22f | **Disclaimer always shown:** "These bands are based on historical TNEA allotment data and are not a guarantee." |
 | FR-22g | Previously shown band archived alongside official rank: "Earlier estimate: X–Y" |
-| FR-22h | `rank_lookup` table: ~180k rows · integer combos total >= 78 · O(1) PK lookup · seeded from 2020–2025 historical rank-list data with abstain rules for sparse ranges |
+| FR-22h | `rank_lookup` table: aggregate-mark rows · O(1) PK lookup · seeded from 2020–2025 historical rank-list data with abstain rules for sparse ranges |
 | FR-22i | **No ML precision claims:** Paid path must not claim ML-model accuracy. No "AI-predicted" or "ML-powered rank" in UI copy. |
 
 ---

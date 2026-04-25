@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
-import { AppProvider } from '@/contexts/AppContext';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -22,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
       <body className="min-h-screen bg-parchment text-anthracite font-sans">
-        <AppProvider>{children}</AppProvider>
+        {children}
       </body>
     </html>
   );

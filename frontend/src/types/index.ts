@@ -1,13 +1,10 @@
-// === Communities ===
-export type Community = 'OC' | 'BC' | 'BCM' | 'MBC' | 'SC' | 'SCA' | 'ST';
+export type Community = "OC" | "BC" | "BCM" | "MBC" | "SC" | "SCA" | "ST";
+export type Board = "State" | "CBSE" | "ICSE";
+export type SafetyLabel = "safe" | "moderate" | "ambitious";
+export type AccessTier = "free" | "paid";
+export type RestrictionReason = "plan_limit" | "tnea_phase" | "data_not_ready";
+export type TNEAPhase = 1 | 2 | 3 | 4 | 5;
 
-// === Board ===
-export type Board = 'State' | 'CBSE' | 'ICSE';
-
-// === Safety Labels ===
-export type SafetyLabel = 'safe' | 'moderate' | 'ambitious';
-
-// === Student ===
 export interface StudentProfile {
   id: string;
   workspaceId: string;
@@ -24,19 +21,17 @@ export interface StudentProfile {
   board: Board;
   rankMin: number | null;
   rankMax: number | null;
-  rankConfidence: 'High' | 'Medium' | 'Low' | null;
+  rankConfidence: "High" | "Medium" | "Low" | null;
   onboardingComplete: boolean;
 }
 
-// === Onboarding ===
-export type OnboardingStep = 'marks' | 'details' | 'rank';
+export type OnboardingStep = "marks" | "details" | "rank";
 
 export interface OnboardingState {
   currentStep: OnboardingStep;
   completed: boolean;
 }
 
-// === College ===
 export interface College {
   code: string;
   name: string;
@@ -49,20 +44,17 @@ export interface College {
   lng: number | null;
 }
 
-// === Branch ===
 export interface Branch {
   code: string;
   name: string;
 }
 
-// === College Branch (with seat info) ===
 export interface CollegeBranch {
   collegeCode: string;
   branchCode: string;
   totalSeats: number;
 }
 
-// === Cutoff ===
 export interface CutoffData {
   collegeCode: string;
   branchCode: string;
@@ -72,79 +64,74 @@ export interface CutoffData {
   closingRank: number;
 }
 
-// === Rank Lookup ===
 export interface RankLookup {
-  aggregateMark: number;
-  rankMin: number;
-  rankMax: number;
-  sampleSize: number;
-  confidence: 'High' | 'Medium' | 'Low';
+  mathsMark: number;
+  physicsMark: number;
+  chemistryMark: number;
+  rankMin: number | null;
+  rankMax: number | null;
+  sampleSize: number | null;
+  confidence: "High" | "Medium" | "Low" | null;
   sourceYears: number[];
   isAbstain: boolean;
+  disclaimer: string;
 }
 
-// === Recommendation ===
 export interface Recommendation {
   collegeCode: string;
   collegeName: string;
   branchCode: string;
   branchName: string;
-  district: string;
-  closingRank: number;
-  safety: SafetyLabel;
-  seasonYear: number;
+  district: string | null;
+  cutoffRank: number | null;
+  safety: SafetyLabel | null;
+  seasonYear: number | null;
+  isLocked: boolean;
 }
 
-// === Choice ===
+export interface RecommendationsEnvelope {
+  items: Recommendation[];
+  total: number;
+  returned: number;
+  paid: boolean;
+  restriction: "plan_limit" | "data_not_ready" | null;
+}
+
 export interface Choice {
   id: string;
   priority: number;
   collegeCode: string;
-  collegeName: string;
+  collegeName: string | null;
   branchCode: string;
-  branchName: string;
-  district: string;
-  safety: SafetyLabel | null;
+  branchName: string | null;
+  district: string | null;
+  systemCategory: SafetyLabel | null;
+  manualCategory: SafetyLabel | null;
   notes: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
-// === Subscription ===
 export interface Subscription {
   id: string;
   workspaceId: string;
-  status: 'active' | 'expired' | 'none';
+  status: "active" | "expired" | "none";
   activatedAt: string | null;
   expiresAt: string | null;
 }
 
-// === TNEA Phase ===
-export type TNEAPhase = 1 | 2 | 3 | 4 | 5;
-
-// === Access Tier ===
-export type AccessTier = 'free' | 'paid';
-
-// === Restriction Reason ===
-export type RestrictionReason = 'plan_limit' | 'tnea_phase' | 'data_not_ready';
-
-// === API Error ===
 export interface ApiError {
   error: string;
   code: string;
 }
 
-// === Payment ===
 export interface PaymentOrder {
   orderId: string;
-  amount: number;
+  amountPaise: number;
   currency: string;
-  status: 'created' | 'paid' | 'failed';
+  keyId: string;
 }
 
-// === Phase Config ===
 export interface AppConfig {
-  tneaPhase: TNEAPhase;
+  tneaPhase: number;
   totalRounds: number;
   rankReleased: boolean;
   rollDataReady: boolean;
@@ -153,4 +140,5 @@ export interface AppConfig {
   broadcastActive: boolean;
   broadcastMessage: string | null;
   rankLookupReady: boolean;
+  dataFreshness: Record<string, "missing" | "seeded_unverified" | "verified" | "stale" | "disabled">;
 }

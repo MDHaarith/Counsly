@@ -44,6 +44,25 @@
 
   /* === Easing === */
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* === Typography Sizes === */
+  --font-size-screen_title: 22px;
+  --font-size-section_header: 18px;
+  --font-size-card_title: 16px;
+  --font-size-feature_title: 14px;
+  --font-size-body_lg: 16px;
+  --font-size-body: 14px;
+  --font-size-body_sm: 13px;
+  --font-size-caption: 12px;
+  --font-size-badge: 11px;
+  --font-size-overline: 10px;
+  --font-size-cta: 15px;
+
+  /* === Line Heights === */
+  --leading-tight: 1.2;
+  --leading-snug: 1.25;
+  --leading-normal: 1.4;
+  --leading-relaxed: 1.5;
 }
 
 /* === Base === */
@@ -57,6 +76,18 @@ body {
   background-color: var(--color-parchment);
   color: var(--color-anthracite);
   font-family: var(--font-sans);
+}
+
+/* Hide native number steppers; numeric fields use custom styling. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
 /* === Skeleton Shimmer === */

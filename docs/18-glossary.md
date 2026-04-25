@@ -18,7 +18,7 @@
 | Eligibility Gate | Hard gate at onboarding Step 1 (TNEA Phase 2+). Students below 90/200 are blocked. Empathetic copy. No shaming. |
 | Shortlist Snapshot | Immutable saved version of an ordered choice list. Titled, timestamped, restorable. |
 | Compare Session | A named saved compare pair/triple. Includes college codes and branch codes. Accessible from dashboard and compare page. |
-| rank_lookup | Planned lookup table · (maths, physics, chemistry) → (rank_min, rank_max, confidence). Built from 2020–2025 historical rank-list data with abstain rules for sparse data. |
+| rank_lookup | Planned lookup table · aggregate mark → (rank_min, rank_max, confidence). Built from 2020–2025 historical rank-list data with abstain rules for sparse data. |
 | Upward Movement | TFC fee-paid students considered for higher-ranked choices if seats become available in upward movement processing. |
 | Roll number | Official DTE identifier — TNEA Phase 4 identity gate |
 | ROLL_DATA_READY | app_config flag — true only after rank list ingestion completes successfully |

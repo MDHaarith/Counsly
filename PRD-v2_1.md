@@ -610,9 +610,9 @@ Every major paid surface should expose a free preview or trial state. Free users
 
 ## Mobile Navigation
 
-**Mobile shell:** 8-tab bottom navigation for launch — Home · Recs · Choices · Explore · Profile.
+**Mobile shell:** 5-tab bottom navigation for launch — Home · Recs · Chat · Explore · Profile.
 
-Chat, Trends, Rounds, and News surface as dashboard cards or locked previews until they are ready enough to deserve primary navigation.
+Choices, Trends, Rounds, and News surface as dashboard cards or locked previews until they are ready enough to deserve primary navigation.
 
 ---
 
@@ -865,13 +865,13 @@ The product does not claim to predict ranks. It provides honest rank guidance gr
 | ID | Requirement |
 |---|---|
 | FR-22a | Rank guidance has two states via `RANK_RELEASED`: before release, show historical rank bands; after release, retire estimates and use official rank only. |
-| FR-22b | **AI Rank Lookup (All Users):** Query `rank_lookup` by (maths, physics, chemistry). Output a historical rank range (`rank_min–rank_max`) and confidence label (High/Medium/Low). This is range-only guidance, not an exact guaranteed rank. No precision language. CBSE/ICSE disclaimer required. |
+| FR-22b | **AI Rank Lookup (All Users):** Query `rank_lookup` by aggregate mark. Output a historical rank range (`rank_min–rank_max`) and confidence label (High/Medium/Low). This is range-only guidance, not an exact guaranteed rank. No precision language. CBSE/ICSE disclaimer required. |
 | FR-22c | **Full Guidance (Paid):** Same range as broad band, plus historical evidence panel (last 3 years), community-wise context, and board context note. No confidence percentage — High/Medium/Low label only. |
 | FR-22d | **Abstain rule:** If <3 data points in marks range across all years, show "Not enough historical data to estimate a reliable range." No band. |
 | FR-22e | **Official-rank-first:** When `RANK_RELEASED=true`, all guidance paths retire. Official rank replaces them for all users. |
 | FR-22f | **Disclaimer always shown:** "These bands are based on historical TNEA allotment data and are not a guarantee." |
 | FR-22g | Previously shown band archived alongside official rank: "Earlier estimate: X–Y" |
-| FR-22h | `rank_lookup` table: ~180k rows · integer combos total >= 78 · O(1) PK lookup · seeded from 2020–2025 historical rank-list data with abstain rules for sparse ranges |
+| FR-22h | `rank_lookup` table: aggregate-mark rows · O(1) PK lookup · seeded from 2020–2025 historical rank-list data with abstain rules for sparse ranges |
 | FR-22i | **No ML precision claims:** Paid path must not claim ML-model accuracy. No "AI-predicted" or "ML-powered rank" in UI copy. |
 
 ---
@@ -1275,7 +1275,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 | `college_branches` | College-to-branch mapping | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `branch_name`, `active`, `source_file`, `extraction_date` |
 | `community_seats` | Per-college per-branch seat totals | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `oc`, `bc`, `bcm`, `mbc`, `sc`, `sca`, `st`, `total`, `source_file`, `extraction_date` |
 | `cutoff_data` | Historical allotment rows for recommendations and analytics | `id uuid pk` | `season_year`, `round_number`, `aggregate_mark`, `general_rank`, `community_quota`, `source_community_raw`, `college_code`, `branch_code`, `allotted_category`, `application_number`, `source_file` |
-| `rank_lookup` | Pre-computed historical rank band lookup | composite PK `(maths_mark, physics_mark, chemistry_mark)` | `maths_mark`, `physics_mark`, `chemistry_mark`, `rank_min`, `rank_max`, `confidence_label`, `sample_size`, `source_years jsonb`, `method_version`, `is_abstain` |
+| `rank_lookup` | Pre-computed historical rank band lookup | PK `(aggregate_mark)` | `aggregate_mark`, `rank_min`, `rank_max`, `confidence_label`, `sample_size`, `source_years jsonb`, `method_version`, `is_abstain` |
 | `tnea_roll_numbers` | Official rank-list rows and claim lookup | `id uuid pk`, unique `(season_year, application_number)`, nullable unique `(season_year, roll_number)` | `season_year`, `roll_number`, `application_number`, `general_rank`, `aggregate_mark`, `community_quota`, `source_community_raw`, `community_rank`, `candidate_name`, `date_of_birth`, `random_number`, `source_file` |
 | `tfc_locations` | Facilitation centre master | `id uuid pk` | `name`, `district`, `address`, `phone`, `latitude`, `longitude`, `maps_url`, `verified_at`, `source_file` |
 
@@ -1317,7 +1317,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 - `student_profiles(workspace_id)`
 - `user_college_preferences(workspace_id, preference_group, priority)`
 - `cutoff_data(season_year, round_number, community_quota, college_code, branch_code)`
-- `rank_lookup(maths_mark, physics_mark, chemistry_mark)`
+- `rank_lookup(aggregate_mark)`
 - `tnea_roll_numbers(season_year, roll_number)`
 - `tnea_roll_numbers(season_year, application_number)`
 - `news_items(status, published_at desc)`
@@ -1753,7 +1753,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 | Eligibility Gate | Hard gate at onboarding Step 1 (TNEA Phase 2+). Students below 90/200 are blocked. Empathetic copy. No shaming. |
 | Shortlist Snapshot | Immutable saved version of an ordered choice list. Titled, timestamped, restorable. |
 | Compare Session | A named saved compare pair/triple. Includes college codes and branch codes. Accessible from dashboard and compare page. |
-| rank_lookup | Planned lookup table · (maths, physics, chemistry) → (rank_min, rank_max, confidence). Built from 2020–2025 historical rank-list data with abstain rules for sparse data. |
+| rank_lookup | Planned lookup table · aggregate mark → (rank_min, rank_max, confidence). Built from 2020–2025 historical rank-list data with abstain rules for sparse data. |
 | Upward Movement | TFC fee-paid students considered for higher-ranked choices if seats become available in upward movement processing. |
 | Roll number | Official DTE identifier — TNEA Phase 4 identity gate |
 | ROLL_DATA_READY | app_config flag — true only after rank list ingestion completes successfully |

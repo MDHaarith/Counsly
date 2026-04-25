@@ -7,10 +7,15 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     session_secret: str = "dev-secret-change-in-production"
+    session_cookie_name: str = "counsly_session"
+    session_ttl_seconds: int = 60 * 60 * 24 * 14
     supabase_url: str = ""
     supabase_service_key: str = ""
-    cors_origins: str = "http://localhost:3000"  # comma-separated
+    database_url: str = ""
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"  # comma-separated
     trusted_hosts: str = "localhost,127.0.0.1"  # comma-separated
+    frontend_url: str = "http://127.0.0.1:3000"
+    season_year: int = 2026
 
     # Optional — chat, payments
     openrouter_api_key: str | None = None
@@ -18,6 +23,7 @@ class Settings(BaseSettings):
     openrouter_model: str | None = None
     razorpay_key_id: str | None = None
     razorpay_key_secret: str | None = None
+    razorpay_amount_paise: int = 14900
 
     model_config = SettingsConfigDict(
         env_file=".env",

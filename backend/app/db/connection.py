@@ -1,14 +1,20 @@
 """Database connection management."""
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
 from psycopg import AsyncConnection
+from psycopg.rows import dict_row
+
+from app.config import settings
+from app.errors import service_unavailable
 
 
-async def get_db_connection() -> AsyncConnection:
-    """Return a new async PostgreSQL connection.
+@asynccontextmanager
+async def get_db_connection() -> AsyncGenerator[AsyncConnection, None]:
+    """Yield a PostgreSQL connection for one request or script operation."""
+    if not settings.database_url:
+        raise service_unavailable("DATABASE_URL is not configured", "DATABASE_NOT_CONFIGURED")
 
-    Uses SUPABASE_URL and SUPABASE_SERVICE_KEY from settings.
-    Connection is NOT auto-closed — the caller (or a context manager)
-    is responsible for closing it.
-    """
-    # TODO: implement using settings.supabase_url and settings.supabase_service_key
-    raise NotImplementedError("Database connection not yet implemented")
+    async with await AsyncConnection.connect(settings.database_url, row_factory=dict_row) as conn:
+        yield conn
