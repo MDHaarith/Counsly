@@ -8,6 +8,7 @@ const AUTH_ROUTES = [
   "/profile",
   "/onboarding",
 ];
+const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
 
 function isAuthRoute(pathname: string) {
   return AUTH_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
@@ -23,14 +24,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  if (isAuthRoute(pathname) && !request.cookies.get("counsly_session")) {
+  if (isAuthRoute(pathname) && !request.cookies.get(SESSION_COOKIE_NAME)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (pathname === "/login" && request.cookies.get("counsly_session")) {
+  if (pathname === "/login" && request.cookies.get(SESSION_COOKIE_NAME)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

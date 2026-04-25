@@ -1,5 +1,6 @@
 """Database query helpers for the P0 Counsly API."""
 
+from decimal import Decimal
 from typing import Any
 
 from psycopg import AsyncConnection
@@ -49,6 +50,7 @@ async def get_session_context(conn: AsyncConnection, app_user_id: str) -> dict[s
                     SELECT 1
                     FROM subscriptions s
                     WHERE s.workspace_id = w.id
+                      AND s.season_year = %s
                       AND s.status = %s
                       AND (s.ends_at IS NULL OR s.ends_at > now())
                 ) AS paid
@@ -57,7 +59,7 @@ async def get_session_context(conn: AsyncConnection, app_user_id: str) -> dict[s
             JOIN workspaces w ON w.app_user_id = au.id
             WHERE au.id = %s AND au.status = %s
             """,
-            ("active", app_user_id, "active"),
+            (settings.season_year, "active", app_user_id, "active"),
         )
         return await cur.fetchone()
 
@@ -119,6 +121,12 @@ async def save_marks(conn: AsyncConnection, workspace_id: str, maths: int, physi
 async def save_details(conn: AsyncConnection, workspace_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
+            "SELECT 1 FROM student_profiles WHERE workspace_id = %s AND maths_mark IS NOT NULL AND physics_mark IS NOT NULL AND chemistry_mark IS NOT NULL",
+            (workspace_id,),
+        )
+        if not await cur.fetchone():
+            raise LookupError("marks required")
+        await cur.execute(
             """
             UPDATE student_profiles SET
                 full_name = %s,
@@ -159,8 +167,8 @@ async def save_details(conn: AsyncConnection, workspace_id: str, payload: dict[s
     return {**state, "cutoff_mark": profile["cutoff_mark"] if profile else None}
 
 
-def calculate_aggregate_mark(maths: int, physics: int, chemistry: int) -> int:
-    return int(round(maths + (physics / 2) + (chemistry / 2)))
+def calculate_aggregate_mark(maths: int, physics: int, chemistry: int) -> Decimal:
+    return Decimal(maths) + (Decimal(physics) / Decimal(2)) + (Decimal(chemistry) / Decimal(2))
 
 
 async def fetch_rank_band(conn: AsyncConnection, maths: int, physics: int, chemistry: int) -> dict[str, Any] | None:
@@ -188,10 +196,23 @@ def compute_safety(student_rank: int | None, cutoff_rank: int | None) -> str | N
     return "ambitious"
 
 
+async def workspace_is_eligible(conn: AsyncConnection, workspace_id: str) -> bool:
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            "SELECT eligible FROM onboarding_state WHERE workspace_id = %s",
+            (workspace_id,),
+        )
+        row = await cur.fetchone()
+    return bool(row and row["eligible"])
+
+
 async def fetch_recommendations(conn: AsyncConnection, workspace_id: str, paid: bool) -> dict[str, Any]:
     profile = await get_student_profile(conn, workspace_id)
     if not profile or not profile.get("community_quota"):
         return {"items": [], "total": 0, "returned": 0, "paid": paid, "restriction": None}
+
+    if not await workspace_is_eligible(conn, workspace_id):
+        return {"items": [], "total": 0, "returned": 0, "paid": paid, "restriction": "ineligible"}
 
     if not await dataset_is_verified(conn, "cutoff_data"):
         return {"items": [], "total": 0, "returned": 0, "paid": paid, "restriction": "data_not_ready"}
@@ -219,14 +240,33 @@ async def fetch_recommendations(conn: AsyncConnection, workspace_id: str, paid: 
             FROM cutoffs
             JOIN colleges c ON c.college_code = cutoffs.college_code
             JOIN branches b ON b.branch_code = cutoffs.branch_code
-            ORDER BY abs(cutoffs.cutoff_rank - COALESCE(%s, cutoffs.cutoff_rank)), c.college_name, b.branch_name
+            LEFT JOIN seat_matrix_current sm ON sm.college_code = cutoffs.college_code AND sm.branch_code = cutoffs.branch_code
+            WHERE (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
+            ORDER BY
+                CASE
+                    WHEN %s IS NULL THEN cutoffs.cutoff_rank
+                    ELSE abs(cutoffs.cutoff_rank - %s)
+                END,
+                c.college_name,
+                b.branch_name
             LIMIT %s
             """,
-            (profile["community_quota"], student_rank, 200 if paid else 10),
+            (profile["community_quota"], student_rank, student_rank, 200 if paid else 10),
         )
         rows = await cur.fetchall()
         await cur.execute(
-            "SELECT count(*) AS count FROM (SELECT DISTINCT college_code, branch_code FROM cutoff_data WHERE community_quota = %s) x",
+            """
+            SELECT count(*) AS count
+            FROM (
+                SELECT DISTINCT cd.college_code, cd.branch_code
+                FROM cutoff_data cd
+                CROSS JOIN (SELECT max(season_year) AS season_year FROM cutoff_data) latest
+                LEFT JOIN seat_matrix_current sm ON sm.college_code = cd.college_code AND sm.branch_code = cd.branch_code
+                WHERE cd.season_year = latest.season_year
+                  AND cd.community_quota = %s
+                  AND (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
+            ) x
+            """,
             (profile["community_quota"],),
         )
         count_row = await cur.fetchone()
@@ -248,11 +288,14 @@ async def list_choices(conn: AsyncConnection, workspace_id: str, paid: bool) -> 
             """
             SELECT ucp.id, ucp.priority, ucp.college_code, c.college_name,
                    ucp.branch_code, b.branch_name, c.district,
-                   ucp.system_category, ucp.manual_category, ucp.notes
+                   ucp.system_category, ucp.manual_category, ucp.notes,
+                   sm.total AS available_total
             FROM user_college_preferences ucp
             LEFT JOIN colleges c ON c.college_code = ucp.college_code
             LEFT JOIN branches b ON b.branch_code = ucp.branch_code
+            LEFT JOIN seat_matrix_current sm ON sm.college_code = ucp.college_code AND sm.branch_code = ucp.branch_code
             WHERE ucp.workspace_id = %s AND ucp.preference_group = %s AND ucp.active = true
+              AND (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
             ORDER BY ucp.priority, ucp.created_at
             LIMIT %s
             """,
@@ -264,6 +307,8 @@ async def list_choices(conn: AsyncConnection, workspace_id: str, paid: bool) -> 
 
 async def add_choice(conn: AsyncConnection, workspace_id: str, paid: bool, payload: dict[str, Any]) -> dict[str, Any]:
     limit = 200 if paid else 20
+    if not await workspace_is_eligible(conn, workspace_id):
+        raise ValueError("ineligible")
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             "SELECT count(*) AS count, COALESCE(max(priority), 0) AS max_priority FROM user_college_preferences WHERE workspace_id = %s AND preference_group = %s AND active = true",
@@ -272,6 +317,21 @@ async def add_choice(conn: AsyncConnection, workspace_id: str, paid: bool, paylo
         count_row = await cur.fetchone()
         if count_row and int(count_row["count"]) >= limit:
             raise ValueError("choice limit reached")
+        await cur.execute(
+            """
+            SELECT
+                NOT EXISTS (SELECT 1 FROM seat_matrix_current)
+                OR EXISTS (
+                    SELECT 1
+                    FROM seat_matrix_current
+                    WHERE college_code = %s AND branch_code = %s AND total > 0
+                ) AS available
+            """,
+            (payload["college_code"], payload["branch_code"]),
+        )
+        availability = await cur.fetchone()
+        if availability and not availability["available"]:
+            raise ValueError("choice unavailable")
         next_priority = int(count_row["max_priority"] if count_row else 0) + 1
         await cur.execute(
             """
@@ -345,11 +405,12 @@ async def fetch_college_detail(conn: AsyncConnection, college_code: str) -> dict
             return None
         await cur.execute(
             """
-            SELECT cb.branch_code, COALESCE(cb.branch_name, b.branch_name) AS branch_name, cs.total AS total_seats
+            SELECT cb.branch_code, COALESCE(cb.branch_name, b.branch_name) AS branch_name, sm.total AS total_seats
             FROM college_branches cb
             LEFT JOIN branches b ON b.branch_code = cb.branch_code
-            LEFT JOIN community_seats cs ON cs.college_code = cb.college_code AND cs.branch_code = cb.branch_code
+            LEFT JOIN seat_matrix_current sm ON sm.college_code = cb.college_code AND sm.branch_code = cb.branch_code
             WHERE cb.college_code = %s AND cb.active = true
+              AND (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
             ORDER BY branch_name
             LIMIT 80
             """,
@@ -363,12 +424,14 @@ async def search_colleges(conn: AsyncConnection, query: str | None, district: st
     clauses = ["is_architecture = false"]
     params: list[Any] = []
     if query:
-        clauses.append("(college_name ILIKE %s OR college_code ILIKE %s)")
-        needle = "%" + query + "%"
+        clauses.append("(college_name ILIKE %s ESCAPE '\\' OR college_code ILIKE %s ESCAPE '\\')")
+        escaped_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        needle = "%" + escaped_query + "%"
         params.extend([needle, needle])
     if district:
-        clauses.append("district ILIKE %s")
-        params.append(district)
+        escaped_district = district.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        clauses.append("district ILIKE %s ESCAPE '\\'")
+        params.append(escaped_district)
     where_sql = " AND ".join(clauses)
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
@@ -392,12 +455,27 @@ async def move_choice(conn: AsyncConnection, workspace_id: str, paid: bool, choi
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
-            UPDATE user_college_preferences
-            SET priority = %s, updated_at = now()
-            WHERE id = %s AND workspace_id = %s AND preference_group = %s AND active = true
+            SELECT id
+            FROM user_college_preferences
+            WHERE workspace_id = %s AND preference_group = %s AND active = true
+            ORDER BY priority, created_at
             """,
-            (priority, choice_id, workspace_id, "primary"),
+            (workspace_id, "primary"),
         )
+        ordered_ids = [str(row["id"]) for row in await cur.fetchall()]
+        if choice_id not in ordered_ids:
+            return await list_choices(conn, workspace_id, paid)
+        ordered_ids.remove(choice_id)
+        ordered_ids.insert(max(0, min(priority - 1, len(ordered_ids))), choice_id)
+        for index, item_id in enumerate(ordered_ids, start=1):
+            await cur.execute(
+                """
+                UPDATE user_college_preferences
+                SET priority = %s, updated_at = now()
+                WHERE id = %s AND workspace_id = %s AND preference_group = %s AND active = true
+                """,
+                (index, item_id, workspace_id, "primary"),
+            )
     await conn.commit()
     return await list_choices(conn, workspace_id, paid)
 
@@ -425,6 +503,20 @@ async def remove_choice(conn: AsyncConnection, workspace_id: str, paid: bool, ch
             WHERE id = %s AND workspace_id = %s AND preference_group = %s
             """,
             (choice_id, workspace_id, "primary"),
+        )
+        await cur.execute(
+            """
+            WITH ordered AS (
+                SELECT id, row_number() OVER (ORDER BY priority, created_at) AS next_priority
+                FROM user_college_preferences
+                WHERE workspace_id = %s AND preference_group = %s AND active = true
+            )
+            UPDATE user_college_preferences ucp
+            SET priority = ordered.next_priority, updated_at = now()
+            FROM ordered
+            WHERE ucp.id = ordered.id
+            """,
+            (workspace_id, "primary"),
         )
     await conn.commit()
     return await list_choices(conn, workspace_id, paid)

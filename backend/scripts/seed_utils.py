@@ -7,7 +7,9 @@ reviewed JSON exports into SQL that can be inspected and applied separately.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
+import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -23,8 +25,32 @@ def parse_args(description: str) -> argparse.Namespace:
     return parser.parse_args()
 
 
+def normalize_key(key: str) -> str:
+    """Normalize extractor column names such as `College_Code` and `COLLEGE CODE`."""
+    normalized = key.strip().lstrip("\ufeff").lower()
+    normalized = re.sub(r"[^a-z0-9]+", "_", normalized)
+    return normalized.strip("_")
+
+
+def normalized_row(row: dict[str, Any]) -> dict[str, Any]:
+    values = dict(row)
+    for key, value in row.items():
+        values.setdefault(normalize_key(str(key)), value)
+    return values
+
+
 def load_rows(path: Path, limit: int | None = None) -> list[dict[str, Any]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    if path.suffix.lower() == ".csv":
+        rows: list[dict[str, Any]] = []
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                rows.append(normalized_row(row))
+                if limit and len(rows) >= limit:
+                    break
+        return rows
+
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
     if isinstance(payload, dict):
         if isinstance(payload.get("items"), list):
             rows = payload["items"]
@@ -35,16 +61,21 @@ def load_rows(path: Path, limit: int | None = None) -> list[dict[str, Any]]:
     elif isinstance(payload, list):
         rows = payload
     else:
-        raise ValueError("Seed source must be a JSON object, object with rows/items, or array.")
+        raise ValueError("Seed source must be a JSON/CSV object, object with rows/items, or array.")
     if not all(isinstance(row, dict) for row in rows):
-        raise ValueError("Every seed row must be a JSON object.")
+        raise ValueError("Every seed row must be an object.")
+    rows = [normalized_row(row) for row in rows]
     return rows[:limit] if limit else rows
 
 
 def first_value(row: dict[str, Any], *keys: str, default: Any = None) -> Any:
+    normalized = normalized_row(row)
     for key in keys:
         if key in row and row[key] not in ("", None):
             return row[key]
+        normalized_key = normalize_key(key)
+        if normalized_key in normalized and normalized[normalized_key] not in ("", None):
+            return normalized[normalized_key]
     return default
 
 
@@ -78,6 +109,26 @@ def render_insert(table: str, columns: list[str], rows: Iterable[dict[str, Any]]
     return "\n".join(sql) + "\n"
 
 
+def render_freshness_update(dataset_name: str, source_reference: str | None = None, rows_loaded: int | None = None) -> str:
+    notes = "Loaded by offline seed script"
+    if rows_loaded is not None:
+        notes = f"{notes}; rows_loaded={rows_loaded}"
+    return render_insert(
+        "data_freshness",
+        ["dataset_name", "last_success_at", "freshness_status", "source_reference", "notes"],
+        [
+            {
+                "dataset_name": dataset_name,
+                "last_success_at": "now()",
+                "freshness_status": "verified",
+                "source_reference": source_reference,
+                "notes": notes,
+            }
+        ],
+        "(dataset_name)",
+    ).replace("'now()'", "now()")
+
+
 def project_rows(source_rows: list[dict[str, Any]], specs: list[ColumnSpec]) -> list[dict[str, Any]]:
     projected = []
     for row in source_rows:
@@ -95,9 +146,12 @@ def write_sql(sql: str, out: Path | None) -> None:
         print(sql, end="")
 
 
-def build_seed_sql(description: str, table: str, specs: list[ColumnSpec], conflict: str | None) -> None:
+def build_seed_sql(description: str, table: str, specs: list[ColumnSpec], conflict: str | None, freshness_dataset: str | None = None) -> None:
     args = parse_args(description)
     if not args.source:
         raise SystemExit("source JSON path is required")
     rows = project_rows(load_rows(args.source, args.limit), specs)
-    write_sql(render_insert(table, [column for column, _ in specs], rows, conflict), args.out)
+    sql = render_insert(table, [column for column, _ in specs], rows, conflict)
+    if freshness_dataset:
+        sql += "\n" + render_freshness_update(freshness_dataset, str(args.source), len(rows))
+    write_sql(sql, args.out)

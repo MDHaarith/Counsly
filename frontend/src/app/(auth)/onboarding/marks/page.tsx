@@ -18,6 +18,11 @@ export default function MarksPage() {
   const total = Number(maths || 0) + Number(physics || 0) / 2 + Number(chemistry || 0) / 2;
 
   async function submit() {
+    const values = [Number(maths), Number(physics), Number(chemistry)];
+    if (values.some((value) => !Number.isFinite(value) || value < 0 || value > 100)) {
+      setError("Enter marks between 0 and 100 for each subject.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

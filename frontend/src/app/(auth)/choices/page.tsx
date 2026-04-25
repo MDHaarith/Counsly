@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { apiClient, postJson } from "@/lib/api";
 import type { SafetyLabel } from "@/types";
 
@@ -26,15 +28,6 @@ interface ChoicesPayload {
   items: ChoiceItem[];
   limit: number;
   paid: boolean;
-}
-
-function escapeHtml(value: string | number | null | undefined) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 export default function ChoicesPage() {
@@ -117,50 +110,46 @@ export default function ChoicesPage() {
     }
   }
 
-  function printChoices() {
+  async function exportChoices() {
     if (!data) return;
-    const rows = data.items
-      .map((choice) => `
-        <tr>
-          <td>${escapeHtml(choice.priority)}</td>
-          <td>${escapeHtml(choice.college_name ?? choice.college_code)}</td>
-          <td>${escapeHtml(choice.branch_name ?? choice.branch_code)}</td>
-          <td>${escapeHtml(choice.district)}</td>
-          <td>${escapeHtml(choice.manual_category ?? choice.system_category)}</td>
-          <td>${escapeHtml(choice.notes)}</td>
-        </tr>
-      `)
-      .join("");
-    const popup = window.open("", "counsly-choice-export", "width=900,height=700");
-    if (!popup) {
-      setError("Allow popups to export the choice list.");
-      return;
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+      const margin = 14;
+      let y = 18;
+      doc.setFont("times", "normal");
+      doc.setFontSize(18);
+      doc.text("Counsly choice list", margin, y);
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(`${data.items.length}/${data.limit} active choices`, margin, y);
+      y += 10;
+      data.items.forEach((choice) => {
+        const lines = doc.splitTextToSize(
+          `${choice.priority}. ${choice.college_name ?? choice.college_code} - ${choice.branch_name ?? choice.branch_code} (${choice.district ?? "District pending"})`,
+          180,
+        );
+        if (y + lines.length * 5 + 8 > 285) {
+          doc.addPage();
+          y = 18;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.text(lines, margin, y);
+        y += lines.length * 5;
+        doc.setFont("helvetica", "normal");
+        const meta = [choice.manual_category ?? choice.system_category, choice.notes].filter(Boolean).join(" | ");
+        if (meta) {
+          const metaLines = doc.splitTextToSize(meta, 180);
+          doc.text(metaLines, margin + 4, y);
+          y += metaLines.length * 5;
+        }
+        y += 4;
+      });
+      doc.save("counsly-choice-list.pdf");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not export PDF.");
     }
-    popup.document.write(`
-      <html>
-        <head>
-          <title>Counsly choice list</title>
-          <style>
-            body { font-family: Inter, Arial, sans-serif; color: #141413; margin: 32px; }
-            h1 { font-family: Georgia, serif; font-weight: 500; margin-bottom: 4px; }
-            p { color: #5e5d59; margin-top: 0; }
-            table { border-collapse: collapse; width: 100%; margin-top: 24px; font-size: 12px; }
-            th, td { border: 1px solid #d9d1c4; padding: 8px; text-align: left; vertical-align: top; }
-            th { background: #eee7dc; }
-          </style>
-        </head>
-        <body>
-          <h1>Counsly choice list</h1>
-          <p>${data.items.length}/${data.limit} active choices</p>
-          <table>
-            <thead><tr><th>#</th><th>College</th><th>Branch</th><th>District</th><th>Category</th><th>Notes</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <script>window.onload = () => window.print();</script>
-        </body>
-      </html>
-    `);
-    popup.document.close();
   }
 
   return (
@@ -172,12 +161,12 @@ export default function ChoicesPage() {
       </div>
       {data && (
         <div className="flex gap-2">
-          <Button variant="secondary" className="w-auto flex-1" onClick={printChoices} disabled={data.items.length === 0}>Export PDF</Button>
+          <Button variant="secondary" className="w-auto flex-1" onClick={exportChoices} disabled={data.items.length === 0}>Export PDF</Button>
           <Button variant="ghost" className="w-auto flex-1" onClick={() => void apiClient<ChoicesPayload>("/api/choices").then(setData)}>Refresh</Button>
         </div>
       )}
       {error && <Card><p className="text-sm text-error-crimson">{error}</p></Card>}
-      {!data && !error && <p className="text-sm text-olive-gray">Loading choices...</p>}
+      {!data && !error && <div className="grid gap-3"><Skeleton className="h-28" /><Skeleton className="h-28" /></div>}
       {data && data.items.length === 0 && <Card><h2 className="font-serif text-lg font-medium">No choices yet</h2><p className="mt-1 text-sm text-olive-gray">Add colleges from recommendations or explore, then reorder them here.</p></Card>}
       <div className="grid gap-3">
         {data?.items.map((choice) => (
@@ -224,7 +213,7 @@ export default function ChoicesPage() {
           </Card>
         ))}
       </div>
-      {data && !data.paid && data.items.length >= data.limit && <Card variant="featured"><p className="text-sm text-olive-gray">Free choices are limited to {data.limit} rows.</p><Button className="mt-3">Unlock Full Access</Button></Card>}
+      {data && !data.paid && data.items.length >= data.limit && <Card variant="featured"><p className="text-sm text-olive-gray">Free choices are limited to {data.limit} rows.</p><Link href="/subscribe?from=choices"><Button className="mt-3">Unlock Full Access</Button></Link></Card>}
       <Card>
         <h2 className="font-serif text-lg font-medium">Quick add</h2>
         <div className="mt-3 grid grid-cols-2 gap-2">

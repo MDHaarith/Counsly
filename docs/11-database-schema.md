@@ -1,7 +1,7 @@
 # Counsly — Database Schema
 
 **Source:** Populated from Sections 3, 5, 7, 8, 10, 16, and 17  
-**Last updated:** 24 April 2026
+**Last updated:** 25 April 2026
 
 ---
 
@@ -72,7 +72,10 @@
 | `colleges` | Canonical college master | natural PK `college_code` | `college_code`, `college_name`, `address`, `district`, `taluk`, `pincode`, `phone_fax`, `email`, `website`, `autonomous_status`, `minority_status`, `placement_record`, `hostel_boys`, `hostel_girls`, `transport_facilities`, `min_transport_charges`, `max_transport_charges`, `latitude`, `longitude`, `maps_url`, `is_architecture`, `raw_payload jsonb` |
 | `branches` | Canonical branch master | natural PK `branch_code` | `branch_code`, `branch_name`, `is_architecture`, `keep`, `removal_reasons jsonb` |
 | `college_branches` | College-to-branch mapping | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `branch_name`, `active`, `source_file`, `extraction_date` |
-| `community_seats` | Per-college per-branch seat totals | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `oc`, `bc`, `bcm`, `mbc`, `sc`, `sca`, `st`, `total`, `source_file`, `extraction_date` |
+| `community_seats` | Historical quota-seat seed table retained from the original schema | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `oc`, `bc`, `bcm`, `mbc`, `sc`, `sca`, `st`, `total`, `source_file`, `extraction_date` |
+| `seat_matrix_current` | Current 2026 choice-filling availability mirror. App hides college-branch rows with `total = 0`. | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `oc`, `bc`, `bcm`, `mbc`, `sc`, `sca`, `st`, `total`, `source_file`, `extraction_date` |
+| `seat_matrix_round_tables` | Metadata registry for physical 2026 per-round seat-matrix tables | `id uuid pk`, unique `(season_year, round_number)`, unique `table_name` | `season_year`, `round_number`, `table_name`, `source_file`, `extraction_date`, `rows_loaded` |
+| `seat_matrix_2026_rN` | Physical per-round 2026 seat-matrix table created by ingestion, e.g. `seat_matrix_2026_r1` | `id uuid pk`, unique `(college_code, branch_code)` | `college_code`, `branch_code`, `oc`, `bc`, `bcm`, `mbc`, `sc`, `sca`, `st`, `total`, `source_file`, `extraction_date` |
 | `cutoff_data` | Historical allotment rows for recommendations and analytics | `id uuid pk` | `season_year`, `round_number`, `aggregate_mark`, `general_rank`, `community_quota`, `source_community_raw`, `college_code`, `branch_code`, `allotted_category`, `application_number`, `source_file` |
 | `rank_lookup` | Pre-computed historical rank band lookup | PK `(aggregate_mark)` | `aggregate_mark`, `rank_min`, `rank_max`, `confidence_label`, `sample_size`, `source_years jsonb`, `method_version`, `is_abstain` |
 | `tnea_roll_numbers` | Official rank-list rows and claim lookup | `id uuid pk`, unique `(season_year, application_number)`, nullable unique `(season_year, roll_number)` | `season_year`, `roll_number`, `application_number`, `general_rank`, `aggregate_mark`, `community_quota`, `source_community_raw`, `community_rank`, `candidate_name`, `date_of_birth`, `random_number`, `source_file` |
@@ -104,7 +107,7 @@
 
 - Keep raw source community values in `source_community_raw`.
 - Normalize `MBCDNC` and `MBCV` into app-facing `MBC`, but do not overwrite raw-ingestion truth.
-- Keep `SCA` as a first-class app-facing quota in `community_seats`, `student_profiles`, and rendered guidance.
+- Keep `SCA` as a first-class app-facing quota in `seat_matrix_current`, per-round `seat_matrix_2026_rN` tables, `community_seats`, `student_profiles`, and rendered guidance.
 - Normalize geo columns to `latitude` and `longitude` in final tables even if source files differ.
 - `college_code` and `branch_code` remain the only accepted natural foreign keys across reference tables.
 
@@ -129,3 +132,17 @@
 - Payment, admin, and ingestion audit tables are backend/admin only.
 - Chat grounding payloads, roll-number verification fields, and payment signatures must never be exposed to the client unfiltered.
 - `workspace_id` is the canonical product boundary. `auth_user_id` remains an identity binding key only.
+
+## Launch Migration And Seed Order
+
+Apply migrations `001_initial_schema.sql`, `002_launch_schema_gaps.sql`, and `003_decimal_aggregate_marks.sql` together for launch. `003` is safe after an older `001/002` deployment and preserves decimal `aggregate_mark` values as `numeric(8,4)` in `cutoff_data`, `rank_lookup`, and `tnea_roll_numbers`.
+
+Seed/load order:
+
+1. `seed_colleges.py` for `colleges`; it maps extractor keys such as `College_Code` and merges `college_geo.json`.
+2. `seed_branches.py`, `seed_college_branches.py`, and `seed_community_seats.py` for reference availability.
+3. `load_cutoffs.py` for the 554K-row historical cutoff CSV.
+4. `build_rank_lookup.py` from GRL CSV, then `load_rank_lookup.py` for rank bands.
+5. `seed_tfc_locations.py` for facilitation centres.
+
+Seed scripts update `data_freshness` to `verified` when they produce/load successful outputs, which is required for feature gates to open.

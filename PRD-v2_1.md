@@ -148,7 +148,7 @@ Every authenticated student gets a **strictly private personal data environment*
 
 ## Overview
 
-This file replaces the older launch-planning notes with the **actual extracted data and schemas** currently available in `/home/mdhaarith/Desktop/Data_Extractor (Copy)`.
+This file replaces the older launch-planning notes with the **actual extracted data and schemas** currently available in `supabase_db/Data_Extractor`, with compact staged copies in `supabase_db/seed_data`.
 
 This repo is **not** currently running on a Supabase-first schema. It is running on a **file-output pipeline** with CSV/JSON artifacts. If you want to ingest into Supabase, use the schemas below as the current source-of-truth inputs.
 

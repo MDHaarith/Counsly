@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { apiClient } from "@/lib/api";
 
 interface CollegeItem {
@@ -58,7 +59,7 @@ export default function ExplorePage() {
         <Button variant="secondary" className="w-auto" onClick={search}>Search</Button>
       </div>
       {error && <Card><p className="text-sm text-error-crimson">{error}</p></Card>}
-      {!data && !error && <p className="text-sm text-olive-gray">Loading colleges...</p>}
+      {!data && !error && <div className="grid gap-3"><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></div>}
       {data && <p className="text-sm text-stone-gray">Showing {data.items.length} of {data.total}</p>}
       <div className="grid gap-3">
         {data?.items.map((college) => (

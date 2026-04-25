@@ -189,7 +189,7 @@ CREATE TABLE cutoff_data (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     season_year INT NOT NULL,
     round_number INT NOT NULL,
-    aggregate_mark INT NOT NULL,
+    aggregate_mark NUMERIC(8,4) NOT NULL,
     general_rank INT,
     community_quota TEXT NOT NULL,
     source_community_raw TEXT,
@@ -206,7 +206,7 @@ ALTER TABLE cutoff_data ENABLE ROW LEVEL SECURITY;
 CREATE INDEX idx_cutoff_data_season_round_community_college_branch ON cutoff_data (season_year, round_number, community_quota, college_code, branch_code);
 
 CREATE TABLE rank_lookup (
-    aggregate_mark INT NOT NULL,
+    aggregate_mark NUMERIC(8,4) NOT NULL,
     rank_min INT NOT NULL,
     rank_max INT NOT NULL,
     confidence_label TEXT,

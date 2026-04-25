@@ -38,6 +38,10 @@ async def post_choice(payload: ChoiceCreateRequest, user: dict = Depends(get_cur
         try:
             result = await add_choice(conn, workspace_id, paid, payload.model_dump())
         except ValueError as exc:
+            if str(exc) == "choice unavailable":
+                raise api_error(409, "This college and branch has no available seats in the active seat matrix", "CHOICE_UNAVAILABLE") from exc
+            if str(exc) == "ineligible":
+                raise api_error(403, "Choice filing is locked because the entered cutoff is below the eligibility threshold", "INELIGIBLE") from exc
             raise api_error(403, "Choice limit reached for your plan", "PLAN_LIMIT") from exc
     return ChoicesEnvelope(**result)
 

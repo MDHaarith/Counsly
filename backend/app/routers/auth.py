@@ -1,5 +1,7 @@
 """Auth endpoints for direct Google OAuth and session management."""
 
+import hmac
+from secrets import token_urlsafe
 from uuid import uuid4
 
 import httpx
@@ -20,6 +22,7 @@ router = APIRouter()
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v3/userinfo"
+OAUTH_STATE_COOKIE = "counsly_oauth_state"
 
 
 def _set_session_cookie(response: Response, token: str) -> None:
@@ -34,17 +37,29 @@ def _set_session_cookie(response: Response, token: str) -> None:
 
 
 @router.get("/google/start")
-async def google_start(request: Request) -> dict[str, str]:
+async def google_start(request: Request, response: Response) -> dict[str, str]:
     if not settings.google_client_id:
         raise service_unavailable("Google OAuth is not configured", "GOOGLE_OAUTH_NOT_CONFIGURED")
     redirect_uri = str(request.url_for("google_callback"))
-    return {"url": await get_google_auth_url(redirect_uri)}
+    state = token_urlsafe(32)
+    response.set_cookie(
+        OAUTH_STATE_COOKIE,
+        state,
+        max_age=600,
+        httponly=True,
+        secure=settings.frontend_url.startswith("https://"),
+        samesite="lax",
+    )
+    return {"url": await get_google_auth_url(redirect_uri, state)}
 
 
 @router.get("/callback")
-async def google_callback(request: Request, code: str) -> RedirectResponse:
+async def google_callback(request: Request, code: str, state: str) -> RedirectResponse:
     if not settings.google_client_id or not settings.google_client_secret:
         raise service_unavailable("Google OAuth is not configured", "GOOGLE_OAUTH_NOT_CONFIGURED")
+    expected_state = request.cookies.get(OAUTH_STATE_COOKIE)
+    if not expected_state or not hmac.compare_digest(expected_state, state):
+        raise api_error(401, "Google OAuth state verification failed", "GOOGLE_OAUTH_STATE_INVALID")
 
     redirect_uri = str(request.url_for("google_callback"))
     async with httpx.AsyncClient(timeout=15) as client:
@@ -111,6 +126,7 @@ async def google_callback(request: Request, code: str) -> RedirectResponse:
     token = await create_session(str(app_user["id"]))
     response = RedirectResponse(url=f"{settings.frontend_url}/dashboard")
     _set_session_cookie(response, token)
+    response.delete_cookie(OAUTH_STATE_COOKIE)
     return response
 
 

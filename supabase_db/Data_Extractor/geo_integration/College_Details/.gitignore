@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments / local env files
+.venv/
+venv/
+.env
+
+# Generated pipeline artifacts
+archive/intermediate/
+archive/v3_intermediate/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

@@ -94,7 +94,7 @@ export interface RecommendationsEnvelope {
   total: number;
   returned: number;
   paid: boolean;
-  restriction: "plan_limit" | "data_not_ready" | null;
+  restriction: "plan_limit" | "data_not_ready" | "ineligible" | null;
 }
 
 export interface Choice {

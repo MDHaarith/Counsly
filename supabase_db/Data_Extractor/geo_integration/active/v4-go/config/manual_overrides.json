@@ -1,0 +1,21 @@
+{
+  "aalim muhammed salegh college engineering muthapudupet avadi iaf chennai 600055": {
+    "original": "Aalim Muhammed Salegh College of Engineering, Muthapudupet, Avadi IAF, Chennai 600055",
+    "query": "Aalim Muhammed Salegh College of Engineering, Muthapudupet, Avadi IAF, Chennai 600055",
+    "latitude": 13.147318,
+    "longitude": 80.05898,
+    "maps_url": "https://www.google.com/maps?q=AALIM+MUHAMMED+SALEGH+College+Of+Engineering,+Muthapudupet,+Avadi,+IAF,+Chennai-600+055.&ll=13.147318,80.05898&z=17",
+    "place_id": "0x3a52886150f14561:0xc3976dba8f6f7588",
+    "source": "official_site",
+    "note": "Official college site links its Google Maps location to Chennai coordinates near 13.147318,80.05898."
+  },
+  "school of architecture and planning anna university chennai": {
+    "original": "School of Architecture and Planning, Anna University, Chennai",
+    "query": "School of Architecture and Planning, Anna University, Chennai",
+    "latitude": 13.010793,
+    "longitude": 80.235231,
+    "maps_url": "https://www.google.com/maps/place/School+of+Architecture+and+Planning,+Anna+University/",
+    "place_id": "ChIJa5jOPrFBUjoRbdnCf4aBLJ4",
+    "note": "SAP shares the Guindy campus with CEG; use parent campus coordinates."
+  }
+}

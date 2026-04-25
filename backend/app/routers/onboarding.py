@@ -25,7 +25,10 @@ async def post_marks(payload: MarksRequest, user: dict = Depends(get_current_use
 async def post_details(payload: DetailsRequest, user: dict = Depends(get_current_user)) -> OnboardingResponse:
     async with get_db_connection() as conn:
         workspace_id = await get_workspace_id(conn, user["app_user_id"])
-        state = await save_details(conn, workspace_id, payload.model_dump())
+        try:
+            state = await save_details(conn, workspace_id, payload.model_dump())
+        except LookupError as exc:
+            raise api_error(400, "Marks are required before details", "MARKS_REQUIRED") from exc
     return OnboardingResponse(**state)
 
 

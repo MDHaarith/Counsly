@@ -16,6 +16,7 @@ def main() -> None:
             ("extraction_date", None),
         ],
         "(college_code, branch_code)",
+        "college_branches",
     )
 
 

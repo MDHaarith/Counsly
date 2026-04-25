@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { apiClient } from "@/lib/api";
 
 interface RankBand {
@@ -33,7 +34,7 @@ export default function RankPage() {
         <p className="mt-2 text-sm leading-relaxed text-olive-gray">This is range guidance from historical data. Official TNEA rank replaces it when released.</p>
       </div>
       <Card variant="featured">
-        {!rank && !error && <p className="text-sm text-olive-gray">Loading rank band...</p>}
+        {!rank && !error && <Skeleton className="h-24" />}
         {error && <p className="text-sm text-error-crimson">{error}</p>}
         {rank && rank.is_abstain && <p className="text-sm leading-relaxed text-olive-gray">Not enough historical data to estimate a reliable range for this marks combination.</p>}
         {rank && !rank.is_abstain && (

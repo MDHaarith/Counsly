@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { apiClient } from "@/lib/api";
 
 interface StatusPayload {
@@ -46,11 +47,13 @@ export default function DashboardPage() {
 
       {error && <Card><p className="text-sm text-error-crimson">{error}</p><Link href="/login"><Button className="mt-4">Login again</Button></Link></Card>}
 
+      {!status && !profile && !error && <div className="grid gap-3"><Skeleton className="h-32" /><Skeleton className="h-24" /></div>}
+
       {status?.broadcast_active && status.broadcast_message && (
         <Card variant="featured"><p className="text-sm leading-relaxed text-anthracite">{status.broadcast_message}</p></Card>
       )}
 
-      <Card>
+      {profile && <Card>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-serif text-xl font-medium">Next best action</h2>
@@ -59,7 +62,7 @@ export default function DashboardPage() {
           {profile?.paid ? <Badge variant="safe">Paid</Badge> : <Badge>Free</Badge>}
         </div>
         <Link href={profile?.cutoff_mark ? "/recommendations" : "/onboarding/marks"}><Button className="mt-4">{profile?.cutoff_mark ? "View recommendations" : "Continue setup"}</Button></Link>
-      </Card>
+      </Card>}
 
       <div className="grid gap-3">
         <Link href="/choices"><Card><h3 className="font-serif text-lg font-medium">Choice list</h3><p className="mt-1 text-sm text-olive-gray">Add colleges, reorder priorities, and keep notes.</p></Card></Link>

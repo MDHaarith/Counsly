@@ -1,10 +1,11 @@
 """Payment endpoints for Razorpay order creation and verification."""
 
+import asyncio
 import hmac
 from hashlib import sha256
 
 import razorpay
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, Request
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -31,13 +32,14 @@ async def create_order(user: dict = Depends(get_current_user)) -> PaymentOrderRe
         context = await get_session_context(conn, user["app_user_id"])
         if not context:
             raise api_error(401, "Not authenticated", "NOT_AUTHENTICATED")
-        order = client.order.create(
+        order = await asyncio.to_thread(
+            client.order.create,
             {
                 "amount": settings.razorpay_amount_paise,
                 "currency": "INR",
                 "payment_capture": 1,
                 "notes": {"workspace_id": str(context["workspace_id"]), "season_year": str(settings.season_year)},
-            }
+            },
         )
         async with conn.cursor() as cur:
             await cur.execute(
@@ -111,6 +113,65 @@ async def verify_payment(payload: PaymentVerifyRequest, user: dict = Depends(get
             )
         await conn.commit()
     return PaymentVerifyResponse(active=True, status="active")
+
+
+@router.post("/webhook")
+async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = Header(default=None)) -> dict[str, bool]:
+    if not settings.razorpay_webhook_secret:
+        raise service_unavailable("Razorpay webhook is not configured", "RAZORPAY_WEBHOOK_NOT_CONFIGURED")
+    body = await request.body()
+    expected = hmac.new(settings.razorpay_webhook_secret.encode(), body, sha256).hexdigest()
+    if not x_razorpay_signature or not hmac.compare_digest(expected, x_razorpay_signature):
+        raise api_error(400, "Webhook signature verification failed", "RAZORPAY_WEBHOOK_SIGNATURE_INVALID")
+
+    payload = await request.json()
+    event_type = str(payload.get("event") or "")
+    payment = ((payload.get("payload") or {}).get("payment") or {}).get("entity") or {}
+    order_id = payment.get("order_id")
+    payment_id = payment.get("id")
+    status = "captured" if event_type == "payment.captured" else payment.get("status", event_type or "received")
+
+    async with get_db_connection() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            payment_order = None
+            if order_id:
+                await cur.execute(
+                    """
+                    UPDATE payment_orders
+                    SET razorpay_payment_id = COALESCE(razorpay_payment_id, %s),
+                        status = %s,
+                        verified_at = CASE WHEN %s = %s THEN COALESCE(verified_at, now()) ELSE verified_at END,
+                        updated_at = now()
+                    WHERE razorpay_order_id = %s
+                    RETURNING id, workspace_id
+                    """,
+                    (payment_id, status, status, "captured", order_id),
+                )
+                payment_order = await cur.fetchone()
+            workspace_id = payment_order["workspace_id"] if payment_order else None
+            if payment_order and status == "captured":
+                await cur.execute(
+                    """
+                    INSERT INTO subscriptions (workspace_id, season_year, plan_code, status, amount_paise, starts_at, ends_at, activated_at, source_payment_order_id)
+                    VALUES (%s, %s, %s, %s, %s, now(), NULL, now(), %s)
+                    ON CONFLICT (workspace_id, season_year) DO UPDATE SET
+                        status = %s,
+                        amount_paise = EXCLUDED.amount_paise,
+                        activated_at = COALESCE(subscriptions.activated_at, now()),
+                        source_payment_order_id = EXCLUDED.source_payment_order_id,
+                        updated_at = now()
+                    """,
+                    (workspace_id, settings.season_year, "full_access", "active", settings.razorpay_amount_paise, payment_order["id"], "active"),
+                )
+            await cur.execute(
+                """
+                INSERT INTO payment_audit_log (workspace_id, payment_order_id, event_type, event_payload)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (workspace_id, payment_order["id"] if payment_order else None, f"webhook:{event_type or 'unknown'}", Jsonb(payload)),
+            )
+        await conn.commit()
+    return {"ok": True}
 
 
 @router.get("/ping")

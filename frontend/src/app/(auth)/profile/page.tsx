@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { apiClient } from "@/lib/api";
 
 interface ProfilePayload {
@@ -30,6 +31,11 @@ export default function ProfilePage() {
     apiClient<ProfilePayload>("/api/profile").then(setProfile).catch((err) => setError(err instanceof Error ? err.message : "Could not load profile."));
   }, []);
 
+  async function logout() {
+    await apiClient("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
+
   return (
     <div className="space-y-4 p-5">
       <div>
@@ -37,7 +43,7 @@ export default function ProfilePage() {
         <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">Student details</h1>
       </div>
       {error && <Card><p className="text-sm text-error-crimson">{error}</p></Card>}
-      {!profile && !error && <p className="text-sm text-olive-gray">Loading profile...</p>}
+      {!profile && !error && <div className="grid gap-3"><Skeleton className="h-28" /><Skeleton className="h-24" /></div>}
       {profile && (
         <>
           <Card variant="featured">
@@ -58,6 +64,7 @@ export default function ProfilePage() {
               <p>Cutoff <span className="font-mono">{profile.cutoff_mark ?? "-"}</span></p>
             </div>
           </Card>
+          <Button variant="secondary" onClick={logout}>Log out</Button>
           {!profile.paid && <Link href="/subscribe?from=profile"><Button>Unlock Full Access</Button></Link>}
         </>
       )}

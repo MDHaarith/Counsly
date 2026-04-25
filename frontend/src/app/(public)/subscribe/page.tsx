@@ -25,6 +25,7 @@ export default function SubscribePage() {
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   async function pay() {
     setLoading(true);
@@ -52,7 +53,10 @@ export default function SubscribePage() {
               razorpay_signature: response.razorpay_signature,
             }),
           });
-          window.location.href = "/dashboard";
+          setSuccess(true);
+          setTimeout(() => {
+            window.location.href = "/dashboard";
+          }, 1200);
         },
       });
       checkout.open();
@@ -76,13 +80,14 @@ export default function SubscribePage() {
           <ul className="space-y-2 text-sm text-olive-gray">
             <li>All recommendations and filters</li>
             <li>200 choice rows with notes</li>
-            <li>Printable choice-list export</li>
+            <li>PDF choice-list export</li>
           </ul>
         </Card>
-        <label className="flex gap-3 text-sm leading-relaxed text-olive-gray">
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 h-5 w-5" />
+        <label className="flex min-h-12 items-start gap-3 text-sm leading-relaxed text-olive-gray">
+          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 h-6 w-6 shrink-0" />
           I understand this is a one-time seasonal purchase and refunds are not handled in-app.
         </label>
+        {success && <Card><p className="text-sm text-safe">Payment verified. Redirecting to your dashboard...</p></Card>}
         {error && <p className="text-sm text-error-crimson">{error}</p>}
         <Button onClick={pay} disabled={!consent || loading}>{loading ? "Starting payment..." : "Pay ₹149"}</Button>
         <Link href="/dashboard"><Button variant="ghost">Back to dashboard</Button></Link>

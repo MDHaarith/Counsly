@@ -1,0 +1,18 @@
+{
+  "source_pdf_abs_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/2022/2022-4/2022-4.pdf",
+  "source_pdf_rel_path": "2022/2022-4/2022-4.pdf",
+  "pdf_sha256": "b6e46a8c297458387438b9d1e9405d2337e7c7a013edf85bb1e37124762adc25",
+  "file_size_bytes": "11244686",
+  "pdf_year": "2022",
+  "pdf_round": "4",
+  "title_line": "ROUND 4 - GENERAL ACADEMIC - PROVISIONAL ALLOTMENT LIST",
+  "bundle_dir": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2022__round_4__2022-4",
+  "pages_extracted": "967",
+  "record_rows": "30938",
+  "record_blocks_seen": "30938",
+  "parse_error_blocks": "0",
+  "unparsed_nonblank_lines": "6769",
+  "layout_types": "name_with_dob",
+  "clean_csv_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2022__round_4__2022-4/records.csv",
+  "audit_files_written": "False"
+}

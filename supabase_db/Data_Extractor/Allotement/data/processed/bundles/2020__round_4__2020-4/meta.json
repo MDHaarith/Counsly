@@ -1,0 +1,18 @@
+{
+  "source_pdf_abs_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/2020/2020-4/2020-4.pdf",
+  "source_pdf_rel_path": "2020/2020-4/2020-4.pdf",
+  "pdf_sha256": "86f81dafd16b61b7f65f8f16064144339b8d961c25a4224569fe01c73f16198f",
+  "file_size_bytes": "3937548",
+  "pdf_year": "2020",
+  "pdf_round": "4",
+  "title_line": "ACADEMIC - IV ROUND - PROVISIONAL ALLOTMENT LIST",
+  "bundle_dir": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2020__round_4__2020-4",
+  "pages_extracted": "928",
+  "record_rows": "27828",
+  "record_blocks_seen": "27828",
+  "parse_error_blocks": "0",
+  "unparsed_nonblank_lines": "7424",
+  "layout_types": "name_without_dob_community_mark_rank",
+  "clean_csv_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2020__round_4__2020-4/records.csv",
+  "audit_files_written": "False"
+}

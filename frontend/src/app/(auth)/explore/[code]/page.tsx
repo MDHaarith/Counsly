@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { apiClient, postJson } from "@/lib/api";
 
 interface BranchInsight {
@@ -50,7 +51,7 @@ export default function CollegeDetailPage() {
   return (
     <div className="space-y-4 p-5">
       {error && <Card><p className="text-sm text-error-crimson">{error}</p></Card>}
-      {!detail && !error && <p className="text-sm text-olive-gray">Loading college...</p>}
+      {!detail && !error && <div className="grid gap-3"><Skeleton className="h-20" /><Skeleton className="h-28" /><Skeleton className="h-24" /></div>}
       {detail && (
         <>
           <div>

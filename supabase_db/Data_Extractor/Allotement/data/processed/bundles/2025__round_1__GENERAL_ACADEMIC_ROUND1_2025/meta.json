@@ -1,0 +1,18 @@
+{
+  "source_pdf_abs_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/2025/2025-1/GENERAL_ACADEMIC_ROUND1_2025.pdf",
+  "source_pdf_rel_path": "2025/2025-1/GENERAL_ACADEMIC_ROUND1_2025.pdf",
+  "pdf_sha256": "f921f05bf5ed9580ecfca8080d0f909a1bea00a76be552203595fee83009153c",
+  "file_size_bytes": "2993120",
+  "pdf_year": "2025",
+  "pdf_round": "1",
+  "title_line": "GENERAL ACADEMIC - PROVISIONAL ALLOTMENT LIST - ROUND 1",
+  "bundle_dir": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2025__round_1__GENERAL_ACADEMIC_ROUND1_2025",
+  "pages_extracted": "608",
+  "record_rows": "26719",
+  "record_blocks_seen": "26719",
+  "parse_error_blocks": "0",
+  "unparsed_nonblank_lines": "4256",
+  "layout_types": "no_name_community_first",
+  "clean_csv_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2025__round_1__GENERAL_ACADEMIC_ROUND1_2025/records.csv",
+  "audit_files_written": "False"
+}

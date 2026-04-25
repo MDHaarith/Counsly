@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { apiClient, postJson } from "@/lib/api";
 import type { SafetyLabel } from "@/types";
 
@@ -25,7 +26,7 @@ interface RecommendationsPayload {
   total: number;
   returned: number;
   paid: boolean;
-  restriction: "plan_limit" | "data_not_ready" | null;
+  restriction: "plan_limit" | "data_not_ready" | "ineligible" | null;
 }
 
 export default function RecommendationsPage() {
@@ -53,7 +54,8 @@ export default function RecommendationsPage() {
         <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">College matches</h1>
       </div>
       {error && <Card><p className="text-sm text-error-crimson">{error}</p></Card>}
-      {!data && !error && <p className="text-sm text-olive-gray">Loading recommendations...</p>}
+      {!data && !error && <div className="grid gap-3"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>}
+      {data?.restriction === "ineligible" && <Card><h2 className="font-serif text-lg font-medium">Recommendations locked</h2><p className="mt-1 text-sm leading-relaxed text-olive-gray">Your entered cutoff is below the guidance threshold, so Counsly will not show recommendation claims for this cycle.</p></Card>}
       {data?.restriction === "data_not_ready" && <Card><h2 className="font-serif text-lg font-medium">Data not ready</h2><p className="mt-1 text-sm leading-relaxed text-olive-gray">Verified cutoff data must be seeded before Counsly can recommend colleges.</p></Card>}
       {data && data.restriction === "plan_limit" && <Card variant="featured"><h2 className="font-serif text-lg font-medium">Showing {data.returned} of {data.total}</h2><p className="mt-1 text-sm text-olive-gray">Unlock all recommendations for this season.</p><Link href="/subscribe?from=recommendations"><Button className="mt-4">Unlock Full Access</Button></Link></Card>}
       <div className="grid gap-3">

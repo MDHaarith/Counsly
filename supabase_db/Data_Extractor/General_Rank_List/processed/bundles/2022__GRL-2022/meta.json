@@ -1,0 +1,16 @@
+{
+  "source_pdf_abs_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/General_Rank_List/GRL-2022/GRL-2022.pdf",
+  "source_pdf_rel_path": "GRL-2022/GRL-2022.pdf",
+  "pdf_sha256": "4d84b71b2203911507d82f31ecdeae13eaa7ec49ce582e0f267c8f26facd7f07",
+  "file_size_bytes": 20107243,
+  "pdf_year": "2022",
+  "parsed_pages": 3722,
+  "parsed_records": 156278,
+  "record_blocks_seen": 156278,
+  "parse_error_count": 0,
+  "non_record_unparsed_line_count": 0,
+  "max_general_rank": 156278,
+  "max_s_no": 0,
+  "general_rank_matches_record_count": true,
+  "s_no_matches_record_count": true
+}

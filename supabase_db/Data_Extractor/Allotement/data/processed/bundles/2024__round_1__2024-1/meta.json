@@ -1,0 +1,18 @@
+{
+  "source_pdf_abs_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/2024/2024-1/2024-1.pdf",
+  "source_pdf_rel_path": "2024/2024-1/2024-1.pdf",
+  "pdf_sha256": "8fcde25f0c4b93b92be79101f3531ad0f7b81da0e8b0feeb76c8eddc86bf3a1d",
+  "file_size_bytes": "3174827",
+  "pdf_year": "2024",
+  "pdf_round": "1",
+  "title_line": "GENERAL ACADEMIC - PROVISIONAL ALLOTMENT LIST - ROUND 1",
+  "bundle_dir": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2024__round_1__2024-1",
+  "pages_extracted": "553",
+  "record_rows": "17679",
+  "record_blocks_seen": "17679",
+  "parse_error_blocks": "0",
+  "unparsed_nonblank_lines": "3871",
+  "layout_types": "name_with_dob",
+  "clean_csv_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2024__round_1__2024-1/records.csv",
+  "audit_files_written": "False"
+}

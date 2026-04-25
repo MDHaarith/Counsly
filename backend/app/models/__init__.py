@@ -84,7 +84,7 @@ class RecommendationsEnvelope(BaseModel):
     total: int
     returned: int
     paid: bool
-    restriction: Literal["plan_limit", "data_not_ready"] | None = None
+    restriction: Literal["plan_limit", "data_not_ready", "ineligible"] | None = None
 
 
 class ChoiceCreateRequest(BaseModel):

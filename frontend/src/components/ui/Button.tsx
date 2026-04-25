@@ -21,9 +21,9 @@ const variantStyles: Record<ButtonVariant, string> = {
     'active:bg-warm-sand/70 active:scale-[0.98]',
   ].join(' '),
   ghost: [
-    'bg-transparent text-terracotta',
-    'hover:bg-terracotta/5',
-    'active:bg-terracotta/10 active:scale-[0.98]',
+    'bg-transparent text-anthracite',
+    'hover:bg-warm-sand/50',
+    'active:bg-warm-sand/70 active:scale-[0.98]',
   ].join(' '),
 };
 
@@ -44,7 +44,7 @@ export function Button({
         'h-12 px-4 rounded-xl',
         'font-medium text-sm leading-none',
         'transition-all duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-terracotta/30',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-focus-blue/30',
         'disabled:opacity-50 disabled:pointer-events-none',
         variantStyles[variant],
         className,

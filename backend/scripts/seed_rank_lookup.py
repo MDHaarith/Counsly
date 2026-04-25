@@ -18,6 +18,7 @@ def main() -> None:
             ("is_abstain", False),
         ],
         "(aggregate_mark)",
+        "rank_lookup",
     )
 
 

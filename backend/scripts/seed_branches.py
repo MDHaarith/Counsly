@@ -10,11 +10,12 @@ def main() -> None:
         [
             ("branch_code", lambda row: first_value(row, "branch_code", "code", "Branch Code")),
             ("branch_name", lambda row: first_value(row, "branch_name", "name", "Branch Name")),
-            ("is_architecture", False),
-            ("keep", True),
-            ("removal_reasons", None),
+            ("is_architecture", lambda row: first_value(row, "is_architecture", default=False)),
+            ("keep", lambda row: first_value(row, "keep", default=True)),
+            ("removal_reasons", lambda row: first_value(row, "removal_reasons")),
         ],
         "(branch_code)",
+        "branches",
     )
 
 

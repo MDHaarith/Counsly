@@ -7,7 +7,7 @@
 
 ## Overview
 
-This file replaces the older launch-planning notes with the **actual extracted data and schemas** currently available in `/home/mdhaarith/Desktop/Data_Extractor (Copy)`.
+This file replaces the older launch-planning notes with the **actual extracted data and schemas** currently available in `supabase_db/Data_Extractor`, with compact staged copies in `supabase_db/seed_data`.
 
 This repo is **not** currently running on a Supabase-first schema. It is running on a **file-output pipeline** with CSV/JSON artifacts. If you want to ingest into Supabase, use the schemas below as the current source-of-truth inputs.
 
@@ -58,6 +58,11 @@ This repo is **not** currently running on a Supabase-first schema. It is running
 - Architecture-only colleges and architecture/design branches were removed from the training-ready export.
 
 **Suggested destination table:** `cutoff_data`
+
+**Launch ingestion path:**
+- Use `backend/scripts/load_cutoffs.py` for direct batched PostgreSQL loading from the CSV source.
+- `AGGREGATE MARK` must be preserved as `numeric(8,4)`, not integer, because the source includes decimal values such as `199.6667`.
+- Successful loading must mark `data_freshness.cutoff_data` as `verified`.
 
 ---
 
@@ -131,6 +136,8 @@ There is no 2026 per-round output under the current `Allotement/data/processed/`
 - The current repo stores these mostly as extracted text, not fully normalized numeric fields.
 
 **Suggested destination table:** `colleges`
+
+**Launch ingestion path:** `backend/scripts/seed_colleges.py` maps exact extractor keys such as `College_Code`, `College_Name`, and `Email-ID`; it also merges available latitude/longitude/maps fields from `seed_data/colleges/college_geo.json`.
 
 ---
 
