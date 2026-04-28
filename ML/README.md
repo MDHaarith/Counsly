@@ -17,13 +17,17 @@ Use total students per year as a training feature or normalization factor.
 Raw rank depends on cohort size, so the safer model is:
 
 ```text
-aggregate_mark -> historical percentile band
+whole-mark bucket -> historical percentile band
 historical percentile band * expected_total_students -> predicted rank band
 ```
 
 For 2026, set an expected cohort size and convert percentile bands back into
 rank bands. This avoids treating rank 20,000 as equivalent across years with
 different applicant counts.
+
+Bucket the GRL to **1-point mark bands** only. That means whole-number buckets
+via floor rounding: `77.99 -> 77`, `84.10 -> 84`. Do not use `0.25` or `0.5`
+mark aggregation for the ML workspace.
 
 ## Profiling
 
@@ -37,6 +41,16 @@ This writes:
 
 - `ML/reports/rank_year_summary.csv`
 - `ML/reports/community_year_counts.csv`
+
+Generate 1-mark training buckets:
+
+```bash
+python3 ML/scripts/build_rank_buckets.py
+```
+
+This writes:
+
+- `ML/reports/rank_mark_buckets_1pt.csv`
 
 Use `rank_year_summary.csv` to choose `EXPECTED_TOTAL_STUDENTS` for 2026 or to
 train a model with cohort size as an explicit feature.
