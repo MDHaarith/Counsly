@@ -89,7 +89,9 @@ ALTER TABLE roll_number_claims ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_roll_number_claims_workspace
     ON roll_number_claims (workspace_id, season_year);
 
--- Runtime round schedule.
+-- Legacy runtime round schedule table. Launch status now reads ROUND_1_DATE
+-- through ROUND_5_DATE from environment variables; keep this table for a
+-- later cleanup migration instead of dropping it here.
 CREATE TABLE IF NOT EXISTS round_dates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     season_year INT NOT NULL,
@@ -166,9 +168,7 @@ ALTER TABLE chat_usage_counters ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO data_freshness (dataset_name, freshness_status, notes) VALUES
     ($$seat_matrix_current$$, $$missing$$, $$Sync from latest 2026 seat-matrix round for realistic choice filling$$),
-    ($$tnea_roll_numbers$$, $$missing$$, $$Load from official GRL/rank-list parser when available$$),
-    ($$round_dates$$, $$missing$$, $$Set from official counselling schedule or admin command$$),
-    ($$news_items$$, $$missing$$, $$Set from runtime admin or scraping pipeline$$)
+    ($$tnea_roll_numbers$$, $$missing$$, $$Load from official GRL/rank-list parser when available$$)
 ON CONFLICT (dataset_name) DO NOTHING;
 
 COMMIT;

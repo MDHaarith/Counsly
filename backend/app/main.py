@@ -29,6 +29,7 @@ logger = logging.getLogger("counsly.api")
 _rate_window_seconds = 60
 _rate_limit = 120
 _rate_buckets: dict[str, deque[float]] = defaultdict(deque)
+_last_rate_cleanup = 0.0
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,16 +40,37 @@ app.add_middleware(
 )
 
 
+def _request_is_https(request: Request) -> bool:
+    return request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").split(",")[0].strip() == "https"
+
+
+def _cleanup_rate_buckets(now: float) -> None:
+    global _last_rate_cleanup
+    if now - _last_rate_cleanup < _rate_window_seconds:
+        return
+    _last_rate_cleanup = now
+    empty_keys = []
+    for key, bucket in _rate_buckets.items():
+        while bucket and bucket[0] <= now - _rate_window_seconds:
+            bucket.popleft()
+        if not bucket:
+            empty_keys.append(key)
+    for key in empty_keys:
+        _rate_buckets.pop(key, None)
+
+
 @app.middleware("http")
 async def request_logging_and_rate_limit(request: Request, call_next):
     started = monotonic()
     client = request.client.host if request.client else "unknown"
     key = f"{client}:{request.url.path}"
     now = monotonic()
+    _cleanup_rate_buckets(now)
     bucket = _rate_buckets[key]
     while bucket and bucket[0] <= now - _rate_window_seconds:
         bucket.popleft()
     if len(bucket) >= _rate_limit:
+        logger.warning("rate_limit_rejected client=%s path=%s", client, request.url.path)
         return JSONResponse(status_code=429, content={"error": "Too many requests", "code": "RATE_LIMITED"})
     bucket.append(now)
 
@@ -56,6 +78,9 @@ async def request_logging_and_rate_limit(request: Request, call_next):
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+    if _request_is_https(request):
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     logger.info(
         "request_complete method=%s path=%s status=%s duration_ms=%s",
         request.method,

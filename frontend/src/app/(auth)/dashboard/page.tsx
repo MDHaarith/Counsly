@@ -11,8 +11,8 @@ import { apiClient } from "@/lib/api";
 
 interface StatusPayload {
   tnea_phase: number;
-  broadcast_active: boolean;
-  broadcast_message: string | null;
+  total_rounds: number;
+  round_dates: Array<{ round_number: number; date: string }>;
   data_freshness: Record<string, string>;
 }
 
@@ -49,10 +49,6 @@ export default function DashboardPage() {
 
       {!status && !profile && !error && <div className="grid gap-3"><Skeleton className="h-32" /><Skeleton className="h-24" /></div>}
 
-      {status?.broadcast_active && status.broadcast_message && (
-        <Card variant="featured"><p className="text-sm leading-relaxed text-anthracite">{status.broadcast_message}</p></Card>
-      )}
-
       {profile && <Card>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -63,6 +59,26 @@ export default function DashboardPage() {
         </div>
         <Link href={profile?.cutoff_mark ? "/recommendations" : "/onboarding/marks"}><Button className="mt-4">{profile?.cutoff_mark ? "View recommendations" : "Continue setup"}</Button></Link>
       </Card>}
+
+      {status && status.round_dates.length > 0 && (
+        <Card>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-serif text-lg font-medium">TNEA rounds</h2>
+              <p className="mt-1 text-sm text-olive-gray">{status.total_rounds} total rounds configured</p>
+            </div>
+            <Badge>{status.tnea_phase > 0 ? `Phase ${status.tnea_phase}` : "Schedule"}</Badge>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {status.round_dates.map((round) => (
+              <div key={round.round_number} className="flex items-center justify-between gap-3 rounded-xl bg-warm-sand/45 px-3 py-2 text-sm">
+                <span className="font-medium text-anthracite">Round {round.round_number}</span>
+                <span className="text-right font-mono text-xs text-olive-gray">{round.date}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-3">
         <Link href="/choices"><Card><h3 className="font-serif text-lg font-medium">Choice list</h3><p className="mt-1 text-sm text-olive-gray">Add colleges, reorder priorities, and keep notes.</p></Card></Link>

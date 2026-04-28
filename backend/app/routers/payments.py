@@ -2,6 +2,7 @@
 
 import asyncio
 import hmac
+import logging
 from hashlib import sha256
 
 import razorpay
@@ -17,6 +18,20 @@ from app.errors import api_error, service_unavailable
 from app.models import PaymentOrderResponse, PaymentVerifyRequest, PaymentVerifyResponse
 
 router = APIRouter()
+logger = logging.getLogger("counsly.security.payments")
+
+
+def verify_razorpay_payment_signature(order_id: str, payment_id: str, signature: str, secret: str) -> bool:
+    signed = f"{order_id}|{payment_id}".encode()
+    expected = hmac.new(secret.encode(), signed, sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+
+def verify_razorpay_webhook_signature(body: bytes, signature: str | None, secret: str) -> bool:
+    if not signature:
+        return False
+    expected = hmac.new(secret.encode(), body, sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 
 def _razorpay_client() -> razorpay.Client:
@@ -65,9 +80,13 @@ async def create_order(user: dict = Depends(get_current_user)) -> PaymentOrderRe
 async def verify_payment(payload: PaymentVerifyRequest, user: dict = Depends(get_current_user)) -> PaymentVerifyResponse:
     if not settings.razorpay_key_secret:
         raise service_unavailable("Razorpay is not configured", "RAZORPAY_NOT_CONFIGURED")
-    signed = f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}".encode()
-    expected = hmac.new(settings.razorpay_key_secret.encode(), signed, sha256).hexdigest()
-    if not hmac.compare_digest(expected, payload.razorpay_signature):
+    if not verify_razorpay_payment_signature(
+        payload.razorpay_order_id,
+        payload.razorpay_payment_id,
+        payload.razorpay_signature,
+        settings.razorpay_key_secret,
+    ):
+        logger.warning("payment_signature_invalid order_id=%s payment_id=%s", payload.razorpay_order_id, payload.razorpay_payment_id)
         raise api_error(400, "Payment signature verification failed", "PAYMENT_SIGNATURE_INVALID")
 
     async with get_db_connection() as conn:
@@ -120,8 +139,8 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
     if not settings.razorpay_webhook_secret:
         raise service_unavailable("Razorpay webhook is not configured", "RAZORPAY_WEBHOOK_NOT_CONFIGURED")
     body = await request.body()
-    expected = hmac.new(settings.razorpay_webhook_secret.encode(), body, sha256).hexdigest()
-    if not x_razorpay_signature or not hmac.compare_digest(expected, x_razorpay_signature):
+    if not verify_razorpay_webhook_signature(body, x_razorpay_signature, settings.razorpay_webhook_secret):
+        logger.warning("razorpay_webhook_signature_invalid has_signature=%s", bool(x_razorpay_signature))
         raise api_error(400, "Webhook signature verification failed", "RAZORPAY_WEBHOOK_SIGNATURE_INVALID")
 
     payload = await request.json()

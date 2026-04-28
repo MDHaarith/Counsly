@@ -373,22 +373,6 @@ CREATE TABLE app_config (
 );
 ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE news_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    summary TEXT,
-    source_url TEXT,
-    published_at TIMESTAMPTZ,
-    status TEXT NOT NULL DEFAULT $$draft$$,
-    sort_order INT NOT NULL DEFAULT 0,
-    created_by TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_news_status CHECK (status IN ($$draft$$,$$active$$,$$archived$$))
-);
-ALTER TABLE news_items ENABLE ROW LEVEL SECURITY;
-CREATE INDEX idx_news_items_status_published ON news_items (status, published_at DESC);
-
 CREATE TABLE ingestion_audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dataset_name TEXT NOT NULL,
@@ -417,29 +401,9 @@ CREATE TABLE data_freshness (
 );
 ALTER TABLE data_freshness ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE admin_audit_log (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_identifier TEXT NOT NULL,
-    command TEXT NOT NULL,
-    target_key TEXT,
-    previous_value JSONB,
-    new_value JSONB,
-    success BOOLEAN NOT NULL DEFAULT false,
-    validation_error TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-ALTER TABLE admin_audit_log ENABLE ROW LEVEL SECURITY;
-
 INSERT INTO app_config (config_key, value_type, value_json) VALUES
-    ($$TNEA_PHASE$$, $$integer$$, $$0$$),
-    ($$TOTAL_ROUNDS$$, $$integer$$, $$0$$),
-    ($$RANK_RELEASED$$, $$boolean$$, $$false$$),
     ($$ROLL_DATA_READY$$, $$boolean$$, $$false$$),
-    ($$RANK_LOOKUP_READY$$, $$boolean$$, $$false$$),
-    ($$FREE_CHAT_LIMIT$$, $$integer$$, $$3$$),
-    ($$SEASON_END_DATE$$, $$string$$, $$null$$),
-    ($$BROADCAST_ACTIVE$$, $$boolean$$, $$false$$),
-    ($$BROADCAST_MESSAGE$$, $$string$$, $$null$$)
+    ($$RANK_LOOKUP_READY$$, $$boolean$$, $$false$$)
 ON CONFLICT (config_key) DO NOTHING;
 
 INSERT INTO data_freshness (dataset_name, freshness_status, notes) VALUES

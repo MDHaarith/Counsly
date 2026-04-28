@@ -137,8 +137,7 @@ export interface AppConfig {
   rollDataReady: boolean;
   freeChatLimit: number;
   seasonEndDate: string | null;
-  broadcastActive: boolean;
-  broadcastMessage: string | null;
+  roundDates: Array<{ roundNumber: number; date: string }>;
   rankLookupReady: boolean;
   dataFreshness: Record<string, "missing" | "seeded_unverified" | "verified" | "stale" | "disabled">;
 }

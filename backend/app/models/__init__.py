@@ -18,6 +18,11 @@ class SessionUser(BaseModel):
     paid: bool = False
 
 
+class RoundDateResponse(BaseModel):
+    round_number: int
+    date: str
+
+
 class AppConfigResponse(BaseModel):
     tnea_phase: int
     total_rounds: int
@@ -26,8 +31,7 @@ class AppConfigResponse(BaseModel):
     rank_lookup_ready: bool
     free_chat_limit: int
     season_end_date: str | None
-    broadcast_active: bool
-    broadcast_message: str | None
+    round_dates: list[RoundDateResponse]
     data_freshness: dict[str, FreshnessStatus]
 
 

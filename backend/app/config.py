@@ -16,6 +16,17 @@ class Settings(BaseSettings):
     trusted_hosts: str = "localhost,127.0.0.1"  # comma-separated
     frontend_url: str = "http://127.0.0.1:3000"
     season_year: int = 2026
+    # TNEA runtime config (replaces app_config table reads)
+    tnea_phase: int = 0
+    total_rounds: int = 0
+    rank_released: bool = False
+    free_chat_limit: int = 3
+    season_end_date: str | None = None
+    round_1_date: str | None = None
+    round_2_date: str | None = None
+    round_3_date: str | None = None
+    round_4_date: str | None = None
+    round_5_date: str | None = None
 
     # Optional — chat, payments
     openrouter_api_key: str | None = None

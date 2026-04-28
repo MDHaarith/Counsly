@@ -2,6 +2,7 @@
 
 from hashlib import sha256
 from datetime import UTC, datetime, timedelta
+import logging
 from uuid import UUID, uuid4
 
 from jose import JWTError, jwt
@@ -9,6 +10,8 @@ from jose import JWTError, jwt
 from app.config import settings
 from app.db.connection import get_db_connection
 from app.errors import api_error
+
+logger = logging.getLogger("counsly.security.session")
 
 
 def _hash_token(token: str) -> str:
@@ -51,14 +54,17 @@ async def verify_session(token: str) -> dict:
     try:
         payload = jwt.decode(token, settings.session_secret, algorithms=["HS256"])
     except JWTError as exc:
+        logger.warning("session_jwt_invalid reason=%s", exc.__class__.__name__)
         raise api_error(401, "Session expired or invalid", "INVALID_SESSION") from exc
 
     if payload.get("typ") != "session" or not payload.get("sub") or not payload.get("jti"):
+        logger.warning("session_claims_invalid has_sub=%s has_jti=%s", bool(payload.get("sub")), bool(payload.get("jti")))
         raise api_error(401, "Session expired or invalid", "INVALID_SESSION")
 
     try:
         UUID(str(payload["sub"]))
     except ValueError as exc:
+        logger.warning("session_subject_invalid")
         raise api_error(401, "Session expired or invalid", "INVALID_SESSION") from exc
 
     async with get_db_connection() as conn:
@@ -77,6 +83,7 @@ async def verify_session(token: str) -> dict:
             )
             row = await cur.fetchone()
     if not row:
+        logger.warning("session_not_found_or_revoked app_user_id=%s", payload["sub"])
         raise api_error(401, "Session expired or invalid", "INVALID_SESSION")
 
     return payload

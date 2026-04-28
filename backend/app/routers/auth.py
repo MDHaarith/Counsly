@@ -1,12 +1,16 @@
 """Auth endpoints for direct Google OAuth and session management."""
 
+import asyncio
 import hmac
+import logging
 from secrets import token_urlsafe
 from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import RedirectResponse
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.oauth2 import id_token as google_id_token
 from psycopg.rows import dict_row
 
 from app.auth.google import get_google_auth_url
@@ -19,6 +23,7 @@ from app.errors import api_error, service_unavailable
 from app.models import SessionUser
 
 router = APIRouter()
+logger = logging.getLogger("counsly.security.auth")
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v3/userinfo"
@@ -34,6 +39,11 @@ def _set_session_cookie(response: Response, token: str) -> None:
         secure=settings.frontend_url.startswith("https://"),
         samesite="lax",
     )
+
+
+def _verify_google_id_token(token: str) -> dict:
+    """Verify Google identity token and return its claims."""
+    return google_id_token.verify_oauth2_token(token, GoogleAuthRequest(), settings.google_client_id)
 
 
 @router.get("/google/start")
@@ -59,6 +69,7 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
         raise service_unavailable("Google OAuth is not configured", "GOOGLE_OAUTH_NOT_CONFIGURED")
     expected_state = request.cookies.get(OAUTH_STATE_COOKIE)
     if not expected_state or not hmac.compare_digest(expected_state, state):
+        logger.warning("oauth_state_invalid path=%s has_cookie=%s", request.url.path, bool(expected_state))
         raise api_error(401, "Google OAuth state verification failed", "GOOGLE_OAUTH_STATE_INVALID")
 
     redirect_uri = str(request.url_for("google_callback"))
@@ -74,15 +85,37 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
             },
         )
         if token_res.status_code >= 400:
+            logger.warning("oauth_token_exchange_failed status=%s", token_res.status_code)
             raise api_error(401, "Google OAuth token exchange failed", "GOOGLE_TOKEN_EXCHANGE_FAILED")
-        access_token = token_res.json().get("access_token")
+        token_payload = token_res.json()
+        access_token = token_payload.get("access_token")
+        identity_token = token_payload.get("id_token")
+        if not access_token:
+            logger.warning("oauth_access_token_missing")
+            raise api_error(401, "Google access token missing", "GOOGLE_ACCESS_TOKEN_MISSING")
+        if not identity_token:
+            logger.warning("oauth_id_token_missing")
+            raise api_error(401, "Google identity token missing", "GOOGLE_ID_TOKEN_MISSING")
+        try:
+            verified_claims = await asyncio.to_thread(_verify_google_id_token, identity_token)
+        except ValueError as exc:
+            logger.warning("oauth_id_token_invalid reason=%s", exc.__class__.__name__)
+            raise api_error(401, "Google identity token verification failed", "GOOGLE_ID_TOKEN_INVALID") from exc
         user_res = await client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
         if user_res.status_code >= 400:
+            logger.warning("oauth_profile_lookup_failed status=%s", user_res.status_code)
             raise api_error(401, "Google profile lookup failed", "GOOGLE_PROFILE_FAILED")
         profile = user_res.json()
 
     if not profile.get("sub") or not profile.get("email"):
+        logger.warning("oauth_profile_incomplete has_sub=%s has_email=%s", bool(profile.get("sub")), bool(profile.get("email")))
         raise api_error(401, "Google profile is missing required identity fields", "GOOGLE_PROFILE_INCOMPLETE")
+    if verified_claims.get("sub") != profile.get("sub") or verified_claims.get("email") != profile.get("email"):
+        logger.warning("oauth_identity_mismatch")
+        raise api_error(401, "Google identity token does not match profile", "GOOGLE_IDENTITY_MISMATCH")
+    if not verified_claims.get("email_verified"):
+        logger.warning("oauth_email_not_verified")
+        raise api_error(401, "Google email is not verified", "GOOGLE_EMAIL_NOT_VERIFIED")
 
     auth_user_id = str(uuid4())
     async with get_db_connection() as conn:
