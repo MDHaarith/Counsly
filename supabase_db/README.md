@@ -59,6 +59,7 @@ Apply all migrations before loading:
 psql "$DATABASE_URL" -f backend/migrations/001_initial_schema.sql
 psql "$DATABASE_URL" -f backend/migrations/002_launch_schema_gaps.sql
 psql "$DATABASE_URL" -f backend/migrations/003_decimal_aggregate_marks.sql
+psql "$DATABASE_URL" -f backend/migrations/004_rls_policies.sql
 ```
 
 Load the large historical datasets with the direct loaders rather than generating one massive SQL file:
@@ -70,3 +71,11 @@ DATABASE_URL="postgresql://..." python3 backend/scripts/load_rank_lookup.py /tmp
 ```
 
 The loaders preserve decimal aggregate marks and update `data_freshness` so recommendations and rank-band gates can open.
+
+Verify the launch gates before marking the deployment launchable:
+
+```bash
+psql "$DATABASE_URL" -c "select dataset_name, freshness_status from data_freshness order by dataset_name;"
+psql "$DATABASE_URL" -c "select config_key, value_json from app_config where config_key in ('ROLL_DATA_READY', 'RANK_LOOKUP_READY') order by config_key;"
+psql "$DATABASE_URL" -c "select schemaname, tablename, policyname from pg_policies where schemaname = 'public' order by tablename, policyname;"
+```
