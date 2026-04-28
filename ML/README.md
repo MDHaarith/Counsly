@@ -29,6 +29,10 @@ Bucket the GRL to **1-point mark bands** only. That means whole-number buckets
 via floor rounding: `77.99 -> 77`, `84.10 -> 84`. Do not use `0.25` or `0.5`
 mark aggregation for the ML workspace.
 
+Store percentiles as whole-number percentages too. The bucket report writes
+`percentile_min` and `percentile_max` as integers from `0` to `100`, not
+decimal fractions.
+
 ## Profiling
 
 Generate yearly cohort totals and summary stats:

@@ -18,6 +18,13 @@ def bucket_mark_1pt(value: str) -> int:
     return int(Decimal(value).quantize(Decimal("1"), rounding=ROUND_FLOOR))
 
 
+def percentile_whole(rank: int, total_students: int) -> int:
+    """Convert a rank to a whole-number percentile percentage."""
+    if total_students <= 0:
+        return 0
+    return int((Decimal(rank) * Decimal("100") / Decimal(total_students)).quantize(Decimal("1"), rounding=ROUND_FLOOR))
+
+
 def main() -> int:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -42,6 +49,8 @@ def main() -> int:
                 "bucket_size",
                 "rank_min",
                 "rank_max",
+                "percentile_min",
+                "percentile_max",
                 "aggregate_mark_min",
                 "aggregate_mark_max",
                 "community_modes",
@@ -68,6 +77,8 @@ def main() -> int:
                     "bucket_size": len(rows),
                     "rank_min": min(ranks),
                     "rank_max": max(ranks),
+                    "percentile_min": percentile_whole(min(ranks), yearly_totals[year]),
+                    "percentile_max": percentile_whole(max(ranks), yearly_totals[year]),
                     "aggregate_mark_min": min(marks),
                     "aggregate_mark_max": max(marks),
                     "community_modes": community_modes,
