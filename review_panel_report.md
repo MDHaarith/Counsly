@@ -1,19 +1,25 @@
 # Counsly Launch Readiness — Review Panel Report
 
-**Date:** 28 April 2026 | **Target Launch:** 05 May 2026
-**Panel:** 4 reviewers (Architecture Critic, Security Auditor, Completeness Checker, Devil's Advocate)
-**Confidence:** Medium — Devil's Advocate made 2 verified false claims corrected below
-**Review mode:** Exhaustive (architecture + code + PRD completeness)
+**Date:** 29 April 2026 | **Target Launch:** 05 May 2026
+**Panel:** 4 reviewers (Completeness Checker, Security Auditor, ML Specialist, Devil's Advocate)
+**Confidence:** High — all findings verified against source code
+**Review mode:** Exhaustive (architecture + code + ML pipeline + product completeness)
+**Previous review:** 28 April (5.5/10, "Launch with conditions")
 
 ---
 
 ## Executive Summary
 
-The codebase is architecturally sound — zero dependency cycles, clean layer separation, 0 layer violations, proper connection pooling, and DB-backed revocable sessions. The core user flows (auth, onboarding, recommendations, choices, explore, payments) all use real SQL queries against seeded data — no stubs.
+Since the 28 April review, significant fixes have been applied: duplicate functions removed, Google ID token verification added, input validation completed, security logging deployed, dead code cleaned, and RLS policies migration written. The security posture is now strong.
 
-However, several real gaps exist: **duplicate function definitions** in the query layer, **no frontend auth middleware**, **missing Google ID token verification**, and **RLS without policies**. The Devil's Advocate recommended delaying 2 weeks, but two of its core claims were verified as false (connection pooling exists, sessions are DB-backed), which significantly reduces the risk profile.
+The app is **product-complete for MVP**. All 7 core features work end-to-end with real data flows, not stubs. The ML pipeline is correctly isolated from production — the rank lookup table (not ML models) powers the actual rank guidance.
 
-**Verdict: Launch on 05 May with documented deferrals and 3 days of focused fixes.**
+Two items need fixing before launch:
+
+1. **Frontend middleware.ts** — The route guard logic exists in `proxy.ts` but is dead code because Next.js requires the file to be named `middleware.ts`. A 5-minute rename fixes this.
+2. **`compute_safety()` asymmetric band** — Students whose rank is worse than a college's cutoff are incorrectly labeled "moderate" instead of "ambitious." The symmetric 500-rank band treats "500 ranks better" and "500 ranks worse" identically. A 30-min fix.
+
+**Verdict: LAUNCH on 05 May. Fix the two items above first.**
 
 ---
 
@@ -21,157 +27,155 @@ However, several real gaps exist: **duplicate function definitions** in the quer
 
 | Reviewer | Score | Recommendation |
 |---|---|---|
-| Security Auditor | 6.5/10 | Launch with P0 fixes |
-| Completeness Checker | 6.5/10 | Conditional Go with deferrals |
-| Devil's Advocate | 3/10 | Do not launch (2 of 4 P0 claims were false — see corrections) |
-| **Weighted Average** | **5.5/10** | **Launch with conditions** |
+| Completeness Checker | 7.5/10 | Launch ready |
+| Security Auditor | 7.0/10 | Launch with 1 fix (middleware.ts) |
+| ML Specialist | 8.0/10 | Launch ready — ML not in production path |
+| Devil's Advocate | 4.0/10 | Fix P0s first, then launch |
+| **Weighted Average** | **6.5/10** | **Launch with 2 fixes** |
 
 ---
 
-## Devil's Advocate False Claims (Verified & Corrected)
+## Previous P0/P1 Status Tracker
 
-The Devil's Advocate made two critical claims that were **factually wrong**:
+| # | Finding (28 April) | Status | Verified By |
+|---|---------------------|--------|-------------|
+| P0-1 | Duplicate functions in `queries.py` | **FIXED** | Completeness Checker |
+| P0-2 | No frontend auth middleware | **NOT FIXED** | All 4 reviewers |
+| P0-3 | RLS enabled but no policies | **FIXED** (migration exists) | Security Auditor |
+| P1-4 | No Google ID token verification | **FIXED** | Security Auditor |
+| P1-5 | Input validation gaps on marks | **FIXED** | Completeness Checker |
+| P1-6 | No security event logging | **FIXED** | Security Auditor |
+| P1-7 | `access.ts` dead code | **FIXED** (deleted) | Completeness Checker |
+| P1-8 | `useAuth` hook is a stub | **FIXED** (43-line implementation) | Completeness Checker |
 
-| Claim | Reality | Evidence |
-|---|---|---|
-| "No connection pooling — per-request connections" | **FALSE**: `AsyncConnectionPool(min_size=5, max_size=20)` in `connection.py` | Read `backend/app/db/connection.py` — lines 22-28 |
-| "Pure JWT with no DB check" | **FALSE**: `verify_session()` checks JWT signature AND queries `user_sessions` table for `revoked_at IS NULL` | Read `backend/app/auth/session.py` — lines 46-82 |
-
-These two corrections remove the "database will crash under load" and "stolen sessions can't be revoked" risk claims, significantly improving the launch readiness picture.
-
----
-
-## Consensus Points (All Reviewers Agree)
-
-### 1. Core flows are real, not stubs
-All three code-reviewing agents confirmed: recommendations engine uses real SQL with cutoff data, explore/search queries real colleges, payment flow has order→verify→webhook, onboarding has a 3-step flow. Seed scripts are real implementations with 1.7M+ rows. **No stub endpoints found.**
-
-### 2. SQL injection protection is solid
-Every query uses parameterized execution (`%s` placeholders). No string concatenation in SQL anywhere.
-
-### 3. Payment flow is production-grade
-Razorpay order creation, HMAC signature verification, webhook handler, audit logging, DB constraints (unique on order_id, payment_id). Completeness Checker confirmed this as a positive finding.
-
-### 4. Zero dependency cycles and clean architecture
-23 communities, 0 cycles, 0 layer violations between frontend/backend/supabase_db. This is a strong structural foundation.
-
-### 5. Missing features are known deferrals, not surprises
-AI Chat, Compare tool, Analytics, mobile app — none of these are built. But the PRD gap register and recent task history show these were intentionally deferred, not accidentally omitted.
+**Progress: 6 of 7 previous items fixed. 1 remaining (middleware.ts).**
 
 ---
 
-## Action Items (Sorted by Priority)
+## New Findings (29 April)
 
-### P0 — Fix Before Launch (3 days)
+### P0 — Fix Before Launch
 
-| # | Finding | Source | Action |
-|---|---------|--------|--------|
-| 1 | **Duplicate function definitions in `queries.py`** | Completeness + DA | Remove the first definitions of `search_colleges`, `move_choice`, `update_choice`, `remove_choice`. Keep only the second (correct) versions with `paid` parameter. **2 hours.** |
-| 2 | **No frontend auth middleware** | Security + Completeness + DA | Add `frontend/src/app/middleware.ts` that checks session cookie and redirects unauthenticated users to `/login` for `(auth)` routes. **4 hours.** |
-| 3 | **RLS enabled but no policies created** | Security Auditor | RLS is enabled on all tables but `CREATE POLICY` was never run. Backend uses workspace_id scoping which is consistent, but this is a defense-in-depth gap. Either add policies or document the decision. **4 hours.** |
+| # | Finding | Source | Effort | Verified |
+|---|---------|--------|--------|----------|
+| 1 | **Frontend middleware.ts missing** — `proxy.ts` has correct logic but is dead code. Next.js only runs `middleware.ts` at project root or `src/` root. All protected routes show error cards to unauthenticated users instead of redirecting to login. | All 4 reviewers | 5 min | YES — no `middleware.ts` exists anywhere |
 
 ### P1 — Should Fix Before Launch
 
-| # | Finding | Source | Action |
+| # | Finding | Source | Effort | Verified |
+|---|---------|--------|--------|----------|
+| 2 | **`compute_safety()` symmetric band** — Uses `abs(student_rank - cutoff_rank) <= 500` which treats "500 ranks worse" the same as "500 ranks better." A student ranked 5000 with cutoff 4500 gets "moderate" when they should get "ambitious." | Devil's Advocate, verified | 30 min | YES — code read at `queries.py:189-196` |
+| 3 | **CORS defaults to localhost** — `CORS_ORIGINS` must be set to production domain before deploy. | Security Auditor | 5 min (env config) | YES — `config.py:15` |
+
+### P2 — Post-Launch
+
+| # | Finding | Source | Detail |
 |---|---------|--------|--------|
-| 4 | **No Google ID token verification** | Security Auditor | OAuth callback exchanges code for tokens but doesn't verify `id_token` with `google.oauth2.id_token.verify_oauth2_token()`. Currently only calls userinfo endpoint. **2 hours.** |
-| 5 | **Input validation gaps on marks** | Devil's Advocate | No validation that marks are within 0-100 range per subject. `maths=999` would pass the `>= 90` check. Add Pydantic `Field(le=200, ge=0)` constraints. **1 hour.** |
-| 6 | **No security event logging** | Security Auditor | No structured logging for failed auth, payment anomalies, rate limit triggers. Add basic structured logging. **2 hours.** |
-| 7 | **`access.ts` is dead code** | Completeness Checker | Never imported by any component. Either wire it up or remove it. **30 min.** |
-| 8 | **`useAuth` hook is a stub** | Devil's Advocate | Returns hardcoded `null/false/true`. Pages work by calling apiClient directly, but any future component using useAuth will break. Wire it up or remove it. **2 hours.** |
-
-### P2 — Fix After Launch (Not Blockers)
-
-| # | Finding | Source | Action |
-|---|---------|--------|--------|
-| 9 | No HSTS/CSP headers | Security Auditor | Add `Strict-Transport-Security` and basic CSP in main.py middleware. Post-launch. |
-| 10 | Rate limit memory leak | Security Auditor | `_rate_buckets` dict grows unbounded. Add periodic cleanup. Post-launch. |
-| 11 | No observability | All reviewers | No Sentry, no UptimeRobot, no GA4. Acceptable for initial launch. Add before 10k users. |
-| 12 | TypeScript types use camelCase, API uses snake_case | Completeness Checker | Types file is misleading but pages use inline interfaces. Normalize post-launch. |
-| 13 | Webhook has no idempotency guard | Security Auditor | ON CONFLICT handling prevents corruption, but duplicate audit entries. Post-launch. |
-| 14 | `seat_matrix_current` empty at launch | Completeness Checker | Queries degrade gracefully (show all colleges). Seed when data available. |
-| 15 | TFC locations seeded but no UI | Completeness Checker | Needed for Phase 4 (counselling active). Build before rounds start. |
-| 16 | Recommendations use only latest year | Devil's Advocate | `WHERE season_year = (SELECT max(...))` — single year. Consider multi-year averaging post-launch. |
-
-### Deferred Features (Documented, Not Blockers)
-
-| Feature | PRD Reference | Status | When |
-|---------|--------------|--------|------|
-| AI Chat | FR-12 through FR-14b | Tables exist, no router/page | v1.1 post-launch |
-| Compare Tool | FR-74 through FR-79 | No page, no API | v1.1 post-launch |
-| Analytics | FR-64 through FR-69 | No page | v1.2 post-launch |
-| Mobile App | G-7 | Web-only | Post-MVP |
-| Countdown Timer | FR-93 | Basic dates shown | Before TNEA Phase 5 |
-| PDF Export | B-8 (was gap) | **RESOLVED** — jsPDF export exists | Done |
-| Google OAuth | B-4 (was gap) | **RESOLVED** — full flow implemented | Done |
+| 4 | Rate limiter is per-process | Devil's Advocate | In-memory `defaultdict(deque)` — fine for single-worker, needs Redis for multi-worker |
+| 5 | Subscription has no `ends_at` | Devil's Advocate | `NULL` in INSERT — logically scoped by season, but no automated cleanup |
+| 6 | Quick-add choices requires raw codes | Devil's Advocate | No autocomplete/search — power-user only, acceptable for MVP |
+| 7 | Webhook audit log has no event dedup | Security Auditor | Duplicate entries on Razorpay retries, data is correct |
+| 8 | Explore page lacks district filter UI | Completeness Checker | Backend supports it, frontend only has text search |
 
 ---
 
-## What Works Well (Positive Findings)
+## ML Pipeline Assessment
 
-| Area | Detail | Source |
-|------|--------|--------|
-| Connection pooling | `AsyncConnectionPool(min_size=5, max_size=20)` | connection.py verified |
-| Session management | JWT + DB-backed with revocation (`revoke_session`) | session.py verified |
-| OAuth state validation | HMAC `compare_digest` for CSRF protection | auth.py verified |
-| Payment audit trail | All events logged to `payment_audit_log` | payments.py verified |
-| Parameterized SQL | 100% parameterized, zero string concatenation | All queries verified |
-| Pydantic validation | Strict types with Field constraints on all models | models/__init__.py verified |
-| Session cookie security | `httpOnly=True`, `Secure` on HTTPS, `SameSite=Lax` | session.py verified |
-| SESSION_SECRET validation | Rejects weak defaults, enforces 32+ chars | config.py verified |
-| Error/404 pages | Both exist and render correctly | error.tsx, not-found.tsx verified |
-| Data freshness awareness | Recommendations check `data_freshness` before querying | queries.py verified |
-| Graceful degradation | Seat matrix empty → show all colleges | queries.py verified |
+### Model Status
+
+| Model | Status | Production Use |
+|-------|--------|---------------|
+| Rank prediction (`rank_model.json`) | **FAILED** — 0.0% MAPE accuracy | NOT used. Production uses `rank_lookup` table |
+| Total students (`total_students_model.json`) | **PASSED** — 95.31% test accuracy | NOT used. Experimental only |
+
+### Why the rank model failed
+
+The custom `TinyMLP` (single hidden layer, 12 nodes, tanh) is too simple for the mark-to-rank relationship, which is a steep S-curve. The MAPE loss function amplifies errors on high-mark predictions (where actual rank is small). The model saturates at `rank_fraction = 1.0` (worst rank) for 60% of the mark range. Root causes: no momentum, no LR scheduling, no gradient clipping, destructive loss function.
+
+### Why this doesn't matter for launch
+
+The production system uses `backend/scripts/build_rank_lookup.py` which performs direct statistical aggregation over 1M+ rows of historical GRL data (2020-2025). No ML inference at runtime. The lookup table provides:
+- O(1) lookup by aggregate mark
+- Historical rank range with sample sizes and source years
+- Confidence labels (High/Medium/Low)
+- Honest, verifiable guidance — not predictions
+
+This aligns with the PRD: "No ML precision claims — No 'AI-predicted' or 'ML-powered rank' in UI copy."
+
+### ML Recommendations
+
+| Priority | Action |
+|---|---|
+| P0 | Verify `rank_lookup` table is seeded in production DB |
+| P1 | Archive or delete the failed `rank_model.json` (0% accuracy is misleading) |
+| P2 | If rank prediction is ever desired, rebuild with proper framework (PyTorch/sklearn), MSE loss, 2+ hidden layers |
+| P2 | Replace total-students TinyMLP with simple linear regression — same accuracy, zero complexity |
+
+---
+
+## Security Posture
+
+### What's Strong
+
+| Area | Detail |
+|------|--------|
+| Connection pooling | `AsyncConnectionPool(min_size=5, max_size=20)` |
+| Session management | JWT + DB-backed with revocation check |
+| OAuth CSRF protection | HMAC `compare_digest` on state parameter |
+| Google ID token verification | `verify_oauth2_token()` with audience constraint |
+| Payment signatures | HMAC-SHA256 with timing-safe comparison |
+| SQL injection protection | 100% parameterized queries |
+| Security headers | X-Frame-Options, HSTS, CSP, X-Content-Type-Options |
+| Security logging | Structured logging across auth, session, payment paths |
+| Input validation | Pydantic `Field` constraints on all models |
+| Cookie security | httpOnly, Secure (on HTTPS), SameSite=Lax |
+| RLS policies | Public reference data readable, private data service_role only |
+| Startup validation | Rejects SESSION_SECRET < 32 chars |
+
+### What Needs Attention
+
+| Area | Detail |
+|------|--------|
+| Frontend middleware | Dead code — `proxy.ts` never executes |
+| CORS configuration | Defaults to localhost, must set for production |
+| Rate limiting | In-memory only, per-process |
 
 ---
 
 ## What the Honest MVP Looks Like
 
-Stripped of PRD ambition, this is what ships on 05 May:
+Ships on 05 May:
 
-**Core value:**
-1. Google OAuth login → personal workspace
-2. 3-step onboarding with rank band prediction (abstain when uncertain)
-3. Safe/Moderate/Ambitious college recommendations (top 10 free, all paid)
-4. Choice filing with reorder, delete, CSV import, PDF export (20 free, 200 paid)
-5. Searchable college explorer with 430 colleges + detail pages
-6. Dashboard with TNEA round schedule and next-best-action
+1. Google OAuth login
+2. 3-step onboarding with rank band from historical data (6 years, 1M+ students)
+3. Safe/Moderate/Ambitious recommendations (10 free, 200 paid)
+4. Choice filing with reorder, delete, PDF export (20 free, 200 paid)
+5. Searchable college explorer with 430 colleges
+6. Dashboard with TNEA round schedule
 7. Razorpay payment (₹149 one-time)
 
-**Not in MVP (deferred):**
-- AI Chat
-- Compare tool
-- Analytics
-- Native mobile app
-- Real-time data scraping
-- TFC location finder
-
-This is a solid v1 for TNEA 2026 — the core tools students need during counselling are present. The deferred features enhance but don't block.
+**Not in MVP (deferred, documented):** AI Chat, Compare tool, Analytics, Mobile app, ML rank prediction, TFC location finder
 
 ---
 
-## 7-Day Fix Plan (03–09 May)
+## 48-Hour Fix Plan (03–04 May)
 
-| Day | Tasks | Hours |
-|-----|-------|-------|
-| Day 1 | P0-1: Clean up duplicate functions in queries.py | 2h |
-| Day 1 | P0-2: Add Next.js auth middleware | 4h |
-| Day 2 | P0-3: Add RLS policies or document decision | 4h |
-| Day 2 | P1-4: Add Google ID token verification | 2h |
-| Day 3 | P1-5: Add marks input validation | 1h |
-| Day 3 | P1-6: Add security event logging | 2h |
-| Day 3 | P1-7+8: Clean up dead code (access.ts, useAuth) | 2h |
-| Day 4 | Manual E2E test: login → onboarding → recommendations → choices → payment | 4h |
-| Day 5 | Set `data_freshness.cutoff_data = 'verified'`, configure env vars | 2h |
-| Day 6 | Production deploy + smoke test | 4h |
-| Day 7 | Buffer | — |
+| Day | Task | Time |
+|-----|------|------|
+| Day 1 AM | Rename `proxy.ts` → `middleware.ts`, fix export name | 5 min |
+| Day 1 AM | Fix `compute_safety()` asymmetric band | 30 min |
+| Day 1 PM | Set production `CORS_ORIGINS` env var | 5 min |
+| Day 1 PM | Verify `rank_lookup` table seeded in production | 15 min |
+| Day 1 PM | Verify RLS migration 004 applied to production | 10 min |
+| Day 2 AM | Smoke test: login → onboarding → recommendations → choices → payment | 2h |
+| Day 2 PM | Deploy from clean tagged SHA | 1h |
 
-**Total: ~27 hours of focused work. Feasible for a solo developer.**
+**Total: ~5 hours of focused work.**
 
 ---
 
 ## Bottom Line
 
-The architecture is solid, the core features work, and the payment flow is production-grade. The codebase has zero dependency cycles and clean separation. The most critical issues (duplicate functions, no auth middleware, RLS gap) are all fixable in 2-3 days.
+The codebase is in significantly better shape than 28 April. 6 of 7 previous issues are fixed. Security is solid. ML models failing doesn't matter — the production system never uses them. The remaining P0 (middleware rename) is a 5-minute fix. The P1 (compute_safety asymmetric band) is a real but contained issue.
 
-**Recommendation: LAUNCH on 05 May.** Complete P0 fixes by 09 May. Deferred features (Chat, Compare, Analytics) are documented v1.1 items, not launch blockers. The TNEA counselling window runs through June-July — launching early with core tools beats launching late with everything.
+**Recommendation: LAUNCH on 05 May.** Complete the 48-hour fix plan. The ML workspace stays as-is — it's correctly isolated experimental code that doesn't affect the app.

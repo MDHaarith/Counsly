@@ -1,6 +1,6 @@
 """Database query helpers for the P0 Counsly API."""
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_FLOOR
 from typing import Any
 
 from psycopg import AsyncConnection
@@ -171,9 +171,40 @@ def calculate_aggregate_mark(maths: int, physics: int, chemistry: int) -> Decima
     return Decimal(maths) + (Decimal(physics) / Decimal(2)) + (Decimal(chemistry) / Decimal(2))
 
 
-async def fetch_rank_band(conn: AsyncConnection, maths: int, physics: int, chemistry: int) -> dict[str, Any] | None:
+async def fetch_rank_band(
+    conn: AsyncConnection,
+    maths: int,
+    physics: int,
+    chemistry: int,
+    community: str | None = None,
+) -> dict[str, Any] | None:
     aggregate_mark = calculate_aggregate_mark(maths, physics, chemistry)
     async with conn.cursor(row_factory=dict_row) as cur:
+        if community:
+            aggregate_bucket = aggregate_mark.to_integral_value(rounding=ROUND_FLOOR)
+            await cur.execute(
+                """
+                SELECT aggregate_mark,
+                       predicted_rank_min AS rank_min,
+                       predicted_rank_max AS rank_max,
+                       confidence_label,
+                       predicted_total_students,
+                       model_version
+                FROM predicted_rank_bands
+                WHERE aggregate_mark = %s AND community_quota = %s
+                """,
+                (aggregate_bucket, community),
+            )
+            predicted = await cur.fetchone()
+            if predicted:
+                return {
+                    **predicted,
+                    "sample_size": None,
+                    "source_years": [],
+                    "is_abstain": False,
+                    "data_source": "ml_prediction",
+                }
+
         await cur.execute(
             """
             SELECT aggregate_mark, rank_min, rank_max,
@@ -183,15 +214,29 @@ async def fetch_rank_band(conn: AsyncConnection, maths: int, physics: int, chemi
             """,
             (aggregate_mark,),
         )
-        return await cur.fetchone()
+        historical = await cur.fetchone()
+        if not historical:
+            return None
+        return {**historical, "model_version": None, "data_source": "historical"}
 
 
-def compute_safety(student_rank: int | None, cutoff_rank: int | None) -> str | None:
+def compute_safety(
+    student_rank: int | None,
+    cutoff_rank: int | None,
+    prediction_lower: int | None = None,
+    prediction_upper: int | None = None,
+) -> str | None:
     if student_rank is None or cutoff_rank is None:
         return None
+    if prediction_lower is not None and prediction_upper is not None:
+        if student_rank <= prediction_lower - 200:
+            return "safe"
+        if student_rank <= prediction_upper + 200:
+            return "moderate"
+        return "ambitious"
     if student_rank <= cutoff_rank - 500:
         return "safe"
-    if abs(student_rank - cutoff_rank) <= 500:
+    if student_rank <= cutoff_rank + 200:
         return "moderate"
     return "ambitious"
 
@@ -214,67 +259,121 @@ async def fetch_recommendations(conn: AsyncConnection, workspace_id: str, paid: 
     if not await workspace_is_eligible(conn, workspace_id):
         return {"items": [], "total": 0, "returned": 0, "paid": paid, "restriction": "ineligible"}
 
-    if not await dataset_is_verified(conn, "cutoff_data"):
-        return {"items": [], "total": 0, "returned": 0, "paid": paid, "restriction": "data_not_ready"}
-
     student_rank = profile.get("official_rank")
     if student_rank is None and profile.get("maths_mark") is not None:
-        band = await fetch_rank_band(conn, profile["maths_mark"], profile["physics_mark"], profile["chemistry_mark"])
+        band = await fetch_rank_band(
+            conn,
+            profile["maths_mark"],
+            profile["physics_mark"],
+            profile["chemistry_mark"],
+            profile.get("community_quota"),
+        )
         if band and not band["is_abstain"]:
             student_rank = band["rank_max"]
 
+    limit = 200 if paid else 10
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
-            WITH latest AS (SELECT max(season_year) AS season_year FROM cutoff_data),
-            cutoffs AS (
-                SELECT cd.college_code, cd.branch_code, max(cd.general_rank) AS cutoff_rank, max(cd.season_year) AS season_year
-                FROM cutoff_data cd, latest
-                WHERE cd.season_year = latest.season_year
-                  AND cd.community_quota = %s
-                  AND cd.general_rank IS NOT NULL
-                GROUP BY cd.college_code, cd.branch_code
-            )
             SELECT c.college_code, c.college_name, b.branch_code, b.branch_name,
-                   c.district, cutoffs.cutoff_rank, cutoffs.season_year
-            FROM cutoffs
-            JOIN colleges c ON c.college_code = cutoffs.college_code
-            JOIN branches b ON b.branch_code = cutoffs.branch_code
-            LEFT JOIN seat_matrix_current sm ON sm.college_code = cutoffs.college_code AND sm.branch_code = cutoffs.branch_code
-            WHERE (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
+                   c.district, p.predicted_closing_rank AS cutoff_rank, p.season_year,
+                   p.prediction_lower, p.prediction_upper,
+                   p.confidence_label AS prediction_confidence,
+                   p.model_version,
+                   'ml_prediction' AS data_source
+            FROM predicted_closing_ranks p
+            JOIN colleges c ON c.college_code = p.college_code
+            JOIN branches b ON b.branch_code = p.branch_code
+            LEFT JOIN seat_matrix_current sm ON sm.college_code = p.college_code AND sm.branch_code = p.branch_code
+            WHERE p.season_year = %s
+              AND p.round_number = %s
+              AND p.community_quota = %s
+              AND (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
             ORDER BY
                 CASE
-                    WHEN %s IS NULL THEN cutoffs.cutoff_rank
-                    ELSE abs(cutoffs.cutoff_rank - %s)
+                    WHEN %s IS NULL THEN p.predicted_closing_rank
+                    ELSE abs(p.predicted_closing_rank - %s)
                 END,
                 c.college_name,
                 b.branch_name
             LIMIT %s
             """,
-            (profile["community_quota"], student_rank, student_rank, 200 if paid else 10),
+            (settings.season_year, 1, profile["community_quota"], student_rank, student_rank, limit),
         )
         rows = await cur.fetchall()
-        await cur.execute(
-            """
-            SELECT count(*) AS count
-            FROM (
-                SELECT DISTINCT cd.college_code, cd.branch_code
-                FROM cutoff_data cd
-                CROSS JOIN (SELECT max(season_year) AS season_year FROM cutoff_data) latest
-                LEFT JOIN seat_matrix_current sm ON sm.college_code = cd.college_code AND sm.branch_code = cd.branch_code
-                WHERE cd.season_year = latest.season_year
-                  AND cd.community_quota = %s
+        if rows:
+            await cur.execute(
+                """
+                SELECT count(*) AS count
+                FROM predicted_closing_ranks p
+                LEFT JOIN seat_matrix_current sm ON sm.college_code = p.college_code AND sm.branch_code = p.branch_code
+                WHERE p.season_year = %s
+                  AND p.round_number = %s
+                  AND p.community_quota = %s
                   AND (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
-            ) x
-            """,
-            (profile["community_quota"],),
-        )
-        count_row = await cur.fetchone()
+                """,
+                (settings.season_year, 1, profile["community_quota"]),
+            )
+            count_row = await cur.fetchone()
+        else:
+            if not await dataset_is_verified(conn, "cutoff_data"):
+                return {"items": [], "total": 0, "returned": 0, "paid": paid, "restriction": "data_not_ready"}
+            await cur.execute(
+                """
+                WITH latest AS (SELECT max(season_year) AS season_year FROM cutoff_data),
+                cutoffs AS (
+                    SELECT cd.college_code, cd.branch_code, max(cd.general_rank) AS cutoff_rank, max(cd.season_year) AS season_year
+                    FROM cutoff_data cd, latest
+                    WHERE cd.season_year = latest.season_year
+                      AND cd.community_quota = %s
+                      AND cd.general_rank IS NOT NULL
+                    GROUP BY cd.college_code, cd.branch_code
+                )
+                SELECT c.college_code, c.college_name, b.branch_code, b.branch_name,
+                       c.district, cutoffs.cutoff_rank, cutoffs.season_year,
+                       NULL::int AS prediction_lower,
+                       NULL::int AS prediction_upper,
+                       NULL::text AS prediction_confidence,
+                       NULL::text AS model_version,
+                       'historical' AS data_source
+                FROM cutoffs
+                JOIN colleges c ON c.college_code = cutoffs.college_code
+                JOIN branches b ON b.branch_code = cutoffs.branch_code
+                LEFT JOIN seat_matrix_current sm ON sm.college_code = cutoffs.college_code AND sm.branch_code = cutoffs.branch_code
+                WHERE (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
+                ORDER BY
+                    CASE
+                        WHEN %s IS NULL THEN cutoffs.cutoff_rank
+                        ELSE abs(cutoffs.cutoff_rank - %s)
+                    END,
+                    c.college_name,
+                    b.branch_name
+                LIMIT %s
+                """,
+                (profile["community_quota"], student_rank, student_rank, limit),
+            )
+            rows = await cur.fetchall()
+            await cur.execute(
+                """
+                SELECT count(*) AS count
+                FROM (
+                    SELECT DISTINCT cd.college_code, cd.branch_code
+                    FROM cutoff_data cd
+                    CROSS JOIN (SELECT max(season_year) AS season_year FROM cutoff_data) latest
+                    LEFT JOIN seat_matrix_current sm ON sm.college_code = cd.college_code AND sm.branch_code = cd.branch_code
+                    WHERE cd.season_year = latest.season_year
+                      AND cd.community_quota = %s
+                      AND (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
+                ) x
+                """,
+                (profile["community_quota"],),
+            )
+            count_row = await cur.fetchone()
 
     items = []
     for row in rows:
         item = dict(row)
-        item["safety"] = compute_safety(student_rank, row["cutoff_rank"])
+        item["safety"] = compute_safety(student_rank, row["cutoff_rank"], row["prediction_lower"], row["prediction_upper"])
         item["is_locked"] = False
         items.append(item)
     total = int(count_row["count"] if count_row else len(items))

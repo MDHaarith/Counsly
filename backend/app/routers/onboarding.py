@@ -39,7 +39,13 @@ async def get_rank(user: dict = Depends(get_current_user)) -> RankBandResponse:
         profile = await get_student_profile(conn, workspace_id)
         if not profile or profile.get("maths_mark") is None:
             raise api_error(400, "Marks are required before rank guidance", "MARKS_REQUIRED")
-        band = await fetch_rank_band(conn, profile["maths_mark"], profile["physics_mark"], profile["chemistry_mark"])
+        band = await fetch_rank_band(
+            conn,
+            profile["maths_mark"],
+            profile["physics_mark"],
+            profile["chemistry_mark"],
+            profile.get("community_quota"),
+        )
 
     if not band:
         return RankBandResponse(
@@ -53,6 +59,8 @@ async def get_rank(user: dict = Depends(get_current_user)) -> RankBandResponse:
             source_years=[],
             is_abstain=True,
             disclaimer=DISCLAIMER,
+            model_version=None,
+            data_source="historical",
         )
 
     source_years = band.get("source_years") or []
@@ -67,6 +75,8 @@ async def get_rank(user: dict = Depends(get_current_user)) -> RankBandResponse:
         source_years=source_years if isinstance(source_years, list) else [],
         is_abstain=band["is_abstain"],
         disclaimer=DISCLAIMER,
+        model_version=band.get("model_version"),
+        data_source=band.get("data_source", "historical"),
     )
 
 

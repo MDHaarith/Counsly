@@ -69,6 +69,8 @@ class RankBandResponse(BaseModel):
     source_years: list[int]
     is_abstain: bool
     disclaimer: str
+    model_version: str | None = None
+    data_source: Literal["ml_prediction", "historical"] = "historical"
 
 
 class RecommendationResponse(BaseModel):
@@ -78,6 +80,11 @@ class RecommendationResponse(BaseModel):
     branch_name: str
     district: str | None
     cutoff_rank: int | None
+    prediction_lower: int | None = None
+    prediction_upper: int | None = None
+    prediction_confidence: Literal["High", "Medium", "Low"] | None = None
+    model_version: str | None = None
+    data_source: Literal["ml_prediction", "historical"] = "historical"
     safety: SafetyCategory | None
     season_year: int | None
     is_locked: bool = False

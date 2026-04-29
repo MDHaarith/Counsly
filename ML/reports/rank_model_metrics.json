@@ -1,0 +1,589 @@
+{
+  "model_version": "rank_fraction_lgbm_v1",
+  "params": {
+    "objective": "regression",
+    "metric": "rmse",
+    "num_leaves": 31,
+    "learning_rate": 0.04,
+    "feature_fraction": 0.9,
+    "bagging_fraction": 0.9,
+    "bagging_freq": 5,
+    "min_child_samples": 5,
+    "verbosity": -1,
+    "seed": 43
+  },
+  "target": "logit(rank_fraction), with OC using general rank / total-year students and quota communities using community rank / community total students",
+  "feature_columns": [
+    "aggregate_mark",
+    "mark_bucket",
+    "year",
+    "total_students",
+    "mark_percentile_hist",
+    "mark_rank_fraction_hist",
+    "community"
+  ],
+  "categorical_features": [
+    "community"
+  ],
+  "model_specs": {
+    "OC": [
+      "OC"
+    ],
+    "BC": [
+      "BC"
+    ],
+    "BCM": [
+      "BCM"
+    ],
+    "MBC": [
+      "MBC"
+    ],
+    "SC": [
+      "SC"
+    ],
+    "small_community": [
+      "SCA",
+      "ST"
+    ]
+  },
+  "community_model": {
+    "OC": "OC",
+    "BC": "BC",
+    "BCM": "BCM",
+    "MBC": "MBC",
+    "SC": "SC",
+    "SCA": "small_community",
+    "ST": "small_community"
+  },
+  "models": {
+    "OC": {
+      "model_name": "OC",
+      "communities": [
+        "OC"
+      ],
+      "model_path": "models/rank_model_OC.txt",
+      "rows": 687,
+      "final_num_boost_round": 193,
+      "folds": [
+        {
+          "train_years": [
+            2020,
+            2021
+          ],
+          "valid_year": 2022,
+          "rows_train": 223,
+          "rows_valid": 116,
+          "best_iteration": 2,
+          "rmse_rank_fraction": 0.248722,
+          "mape_raw_rank_gt_1000_pct": 209.25,
+          "within_10pct_rank_accuracy_pct": 12.93,
+          "residual_std_fraction": 0.210875,
+          "predicted_fraction_min": 0.331993,
+          "predicted_fraction_max": 0.700559
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022
+          ],
+          "valid_year": 2023,
+          "rows_train": 339,
+          "rows_valid": 116,
+          "best_iteration": 400,
+          "rmse_rank_fraction": 0.05276,
+          "mape_raw_rank_gt_1000_pct": 13.44,
+          "within_10pct_rank_accuracy_pct": 44.83,
+          "residual_std_fraction": 0.05047,
+          "predicted_fraction_min": 0.00108,
+          "predicted_fraction_max": 0.96612
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023
+          ],
+          "valid_year": 2024,
+          "rows_train": 455,
+          "rows_valid": 116,
+          "best_iteration": 91,
+          "rmse_rank_fraction": 0.031529,
+          "mape_raw_rank_gt_1000_pct": 8.28,
+          "within_10pct_rank_accuracy_pct": 59.48,
+          "residual_std_fraction": 0.026523,
+          "predicted_fraction_min": 0.001276,
+          "predicted_fraction_max": 0.988425
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023,
+            2024
+          ],
+          "valid_year": 2025,
+          "rows_train": 571,
+          "rows_valid": 116,
+          "best_iteration": 280,
+          "rmse_rank_fraction": 0.041649,
+          "mape_raw_rank_gt_1000_pct": 11.04,
+          "within_10pct_rank_accuracy_pct": 50.0,
+          "residual_std_fraction": 0.020554,
+          "predicted_fraction_min": 0.000498,
+          "predicted_fraction_max": 0.990844
+        }
+      ],
+      "summary": {
+        "mean_rmse_rank_fraction": 0.093665,
+        "mean_mape_raw_rank_gt_1000_pct": 60.5,
+        "mean_within_10pct_rank_accuracy_pct": 41.81,
+        "residual_std_fraction": 0.077106,
+        "predictions_are_not_collapsed_to_1": true
+      }
+    },
+    "BC": {
+      "model_name": "BC",
+      "communities": [
+        "BC"
+      ],
+      "model_path": "models/rank_model_BC.txt",
+      "rows": 737,
+      "final_num_boost_round": 131,
+      "folds": [
+        {
+          "train_years": [
+            2020,
+            2021
+          ],
+          "valid_year": 2022,
+          "rows_train": 246,
+          "rows_valid": 124,
+          "best_iteration": 11,
+          "rmse_rank_fraction": 0.179109,
+          "mape_raw_rank_gt_1000_pct": 79.46,
+          "within_10pct_rank_accuracy_pct": 36.29,
+          "residual_std_fraction": 0.127619,
+          "predicted_fraction_min": 0.087546,
+          "predicted_fraction_max": 0.937731
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022
+          ],
+          "valid_year": 2023,
+          "rows_train": 370,
+          "rows_valid": 123,
+          "best_iteration": 145,
+          "rmse_rank_fraction": 0.037856,
+          "mape_raw_rank_gt_1000_pct": 11.1,
+          "within_10pct_rank_accuracy_pct": 62.6,
+          "residual_std_fraction": 0.037839,
+          "predicted_fraction_min": 0.004453,
+          "predicted_fraction_max": 0.999879
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023
+          ],
+          "valid_year": 2024,
+          "rows_train": 493,
+          "rows_valid": 122,
+          "best_iteration": 89,
+          "rmse_rank_fraction": 0.019679,
+          "mape_raw_rank_gt_1000_pct": 5.48,
+          "within_10pct_rank_accuracy_pct": 81.97,
+          "residual_std_fraction": 0.018515,
+          "predicted_fraction_min": 0.002528,
+          "predicted_fraction_max": 0.999169
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023,
+            2024
+          ],
+          "valid_year": 2025,
+          "rows_train": 615,
+          "rows_valid": 122,
+          "best_iteration": 280,
+          "rmse_rank_fraction": 0.039737,
+          "mape_raw_rank_gt_1000_pct": 9.23,
+          "within_10pct_rank_accuracy_pct": 57.38,
+          "residual_std_fraction": 0.022411,
+          "predicted_fraction_min": 0.000538,
+          "predicted_fraction_max": 0.999982
+        }
+      ],
+      "summary": {
+        "mean_rmse_rank_fraction": 0.069095,
+        "mean_mape_raw_rank_gt_1000_pct": 26.32,
+        "mean_within_10pct_rank_accuracy_pct": 59.56,
+        "residual_std_fraction": 0.051596,
+        "predictions_are_not_collapsed_to_1": true
+      }
+    },
+    "BCM": {
+      "model_name": "BCM",
+      "communities": [
+        "BCM"
+      ],
+      "model_path": "models/rank_model_BCM.txt",
+      "rows": 731,
+      "final_num_boost_round": 127,
+      "folds": [
+        {
+          "train_years": [
+            2020,
+            2021
+          ],
+          "valid_year": 2022,
+          "rows_train": 239,
+          "rows_valid": 124,
+          "best_iteration": 11,
+          "rmse_rank_fraction": 0.219106,
+          "mape_raw_rank_gt_1000_pct": 52.08,
+          "within_10pct_rank_accuracy_pct": 27.42,
+          "residual_std_fraction": 0.148609,
+          "predicted_fraction_min": 0.116006,
+          "predicted_fraction_max": 0.924285
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022
+          ],
+          "valid_year": 2023,
+          "rows_train": 363,
+          "rows_valid": 123,
+          "best_iteration": 190,
+          "rmse_rank_fraction": 0.051405,
+          "mape_raw_rank_gt_1000_pct": 6.65,
+          "within_10pct_rank_accuracy_pct": 62.6,
+          "residual_std_fraction": 0.040247,
+          "predicted_fraction_min": 0.001365,
+          "predicted_fraction_max": 0.999858
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023
+          ],
+          "valid_year": 2024,
+          "rows_train": 486,
+          "rows_valid": 123,
+          "best_iteration": 66,
+          "rmse_rank_fraction": 0.023918,
+          "mape_raw_rank_gt_1000_pct": 5.03,
+          "within_10pct_rank_accuracy_pct": 76.42,
+          "residual_std_fraction": 0.019324,
+          "predicted_fraction_min": 0.001906,
+          "predicted_fraction_max": 0.997996
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023,
+            2024
+          ],
+          "valid_year": 2025,
+          "rows_train": 609,
+          "rows_valid": 122,
+          "best_iteration": 244,
+          "rmse_rank_fraction": 0.042073,
+          "mape_raw_rank_gt_1000_pct": 8.57,
+          "within_10pct_rank_accuracy_pct": 46.72,
+          "residual_std_fraction": 0.022676,
+          "predicted_fraction_min": 0.000452,
+          "predicted_fraction_max": 0.999812
+        }
+      ],
+      "summary": {
+        "mean_rmse_rank_fraction": 0.084125,
+        "mean_mape_raw_rank_gt_1000_pct": 18.08,
+        "mean_within_10pct_rank_accuracy_pct": 53.29,
+        "residual_std_fraction": 0.057714,
+        "predictions_are_not_collapsed_to_1": true
+      }
+    },
+    "MBC": {
+      "model_name": "MBC",
+      "communities": [
+        "MBC"
+      ],
+      "model_path": "models/rank_model_MBC.txt",
+      "rows": 733,
+      "final_num_boost_round": 130,
+      "folds": [
+        {
+          "train_years": [
+            2020,
+            2021
+          ],
+          "valid_year": 2022,
+          "rows_train": 238,
+          "rows_valid": 124,
+          "best_iteration": 14,
+          "rmse_rank_fraction": 0.251482,
+          "mape_raw_rank_gt_1000_pct": 111.03,
+          "within_10pct_rank_accuracy_pct": 1.61,
+          "residual_std_fraction": 0.223615,
+          "predicted_fraction_min": 0.079213,
+          "predicted_fraction_max": 0.861904
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022
+          ],
+          "valid_year": 2023,
+          "rows_train": 362,
+          "rows_valid": 124,
+          "best_iteration": 267,
+          "rmse_rank_fraction": 0.05295,
+          "mape_raw_rank_gt_1000_pct": 9.51,
+          "within_10pct_rank_accuracy_pct": 56.45,
+          "residual_std_fraction": 0.051638,
+          "predicted_fraction_min": 0.000454,
+          "predicted_fraction_max": 0.999901
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023
+          ],
+          "valid_year": 2024,
+          "rows_train": 486,
+          "rows_valid": 124,
+          "best_iteration": 63,
+          "rmse_rank_fraction": 0.027913,
+          "mape_raw_rank_gt_1000_pct": 6.48,
+          "within_10pct_rank_accuracy_pct": 67.74,
+          "residual_std_fraction": 0.021041,
+          "predicted_fraction_min": 0.001315,
+          "predicted_fraction_max": 0.998348
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023,
+            2024
+          ],
+          "valid_year": 2025,
+          "rows_train": 610,
+          "rows_valid": 123,
+          "best_iteration": 178,
+          "rmse_rank_fraction": 0.048822,
+          "mape_raw_rank_gt_1000_pct": 12.7,
+          "within_10pct_rank_accuracy_pct": 43.09,
+          "residual_std_fraction": 0.025044,
+          "predicted_fraction_min": 0.000287,
+          "predicted_fraction_max": 0.999889
+        }
+      ],
+      "summary": {
+        "mean_rmse_rank_fraction": 0.095292,
+        "mean_mape_raw_rank_gt_1000_pct": 34.93,
+        "mean_within_10pct_rank_accuracy_pct": 42.22,
+        "residual_std_fraction": 0.080335,
+        "predictions_are_not_collapsed_to_1": true
+      }
+    },
+    "SC": {
+      "model_name": "SC",
+      "communities": [
+        "SC"
+      ],
+      "model_path": "models/rank_model_SC.txt",
+      "rows": 737,
+      "final_num_boost_round": 118,
+      "folds": [
+        {
+          "train_years": [
+            2020,
+            2021
+          ],
+          "valid_year": 2022,
+          "rows_train": 244,
+          "rows_valid": 124,
+          "best_iteration": 11,
+          "rmse_rank_fraction": 0.249765,
+          "mape_raw_rank_gt_1000_pct": 113.35,
+          "within_10pct_rank_accuracy_pct": 13.71,
+          "residual_std_fraction": 0.16093,
+          "predicted_fraction_min": 0.071399,
+          "predicted_fraction_max": 0.856378
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022
+          ],
+          "valid_year": 2023,
+          "rows_train": 368,
+          "rows_valid": 123,
+          "best_iteration": 185,
+          "rmse_rank_fraction": 0.064652,
+          "mape_raw_rank_gt_1000_pct": 13.77,
+          "within_10pct_rank_accuracy_pct": 34.96,
+          "residual_std_fraction": 0.056468,
+          "predicted_fraction_min": 0.000525,
+          "predicted_fraction_max": 0.999671
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023
+          ],
+          "valid_year": 2024,
+          "rows_train": 491,
+          "rows_valid": 124,
+          "best_iteration": 67,
+          "rmse_rank_fraction": 0.019277,
+          "mape_raw_rank_gt_1000_pct": 5.14,
+          "within_10pct_rank_accuracy_pct": 70.97,
+          "residual_std_fraction": 0.0188,
+          "predicted_fraction_min": 0.001023,
+          "predicted_fraction_max": 0.998249
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023,
+            2024
+          ],
+          "valid_year": 2025,
+          "rows_train": 615,
+          "rows_valid": 122,
+          "best_iteration": 210,
+          "rmse_rank_fraction": 0.049913,
+          "mape_raw_rank_gt_1000_pct": 13.39,
+          "within_10pct_rank_accuracy_pct": 33.61,
+          "residual_std_fraction": 0.027857,
+          "predicted_fraction_min": 0.000257,
+          "predicted_fraction_max": 0.999481
+        }
+      ],
+      "summary": {
+        "mean_rmse_rank_fraction": 0.095902,
+        "mean_mape_raw_rank_gt_1000_pct": 36.41,
+        "mean_within_10pct_rank_accuracy_pct": 38.31,
+        "residual_std_fraction": 0.066014,
+        "predictions_are_not_collapsed_to_1": true
+      }
+    },
+    "small_community": {
+      "model_name": "small_community",
+      "communities": [
+        "SCA",
+        "ST"
+      ],
+      "model_path": "models/rank_model_small_community.txt",
+      "rows": 1358,
+      "final_num_boost_round": 152,
+      "folds": [
+        {
+          "train_years": [
+            2020,
+            2021
+          ],
+          "valid_year": 2022,
+          "rows_train": 424,
+          "rows_valid": 235,
+          "best_iteration": 13,
+          "rmse_rank_fraction": 0.280597,
+          "mape_raw_rank_gt_1000_pct": 43.22,
+          "within_10pct_rank_accuracy_pct": 8.09,
+          "residual_std_fraction": 0.170068,
+          "predicted_fraction_min": 0.067863,
+          "predicted_fraction_max": 0.876844
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022
+          ],
+          "valid_year": 2023,
+          "rows_train": 659,
+          "rows_valid": 223,
+          "best_iteration": 365,
+          "rmse_rank_fraction": 0.093171,
+          "mape_raw_rank_gt_1000_pct": 19.11,
+          "within_10pct_rank_accuracy_pct": 16.14,
+          "residual_std_fraction": 0.08187,
+          "predicted_fraction_min": 0.000788,
+          "predicted_fraction_max": 0.999813
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023
+          ],
+          "valid_year": 2024,
+          "rows_train": 882,
+          "rows_valid": 235,
+          "best_iteration": 52,
+          "rmse_rank_fraction": 0.019556,
+          "mape_raw_rank_gt_1000_pct": 3.46,
+          "within_10pct_rank_accuracy_pct": 68.94,
+          "residual_std_fraction": 0.019465,
+          "predicted_fraction_min": 0.002988,
+          "predicted_fraction_max": 0.993541
+        },
+        {
+          "train_years": [
+            2020,
+            2021,
+            2022,
+            2023,
+            2024
+          ],
+          "valid_year": 2025,
+          "rows_train": 1117,
+          "rows_valid": 241,
+          "best_iteration": 178,
+          "rmse_rank_fraction": 0.053889,
+          "mape_raw_rank_gt_1000_pct": 8.04,
+          "within_10pct_rank_accuracy_pct": 36.51,
+          "residual_std_fraction": 0.033861,
+          "predicted_fraction_min": 0.000656,
+          "predicted_fraction_max": 0.999884
+        }
+      ],
+      "summary": {
+        "mean_rmse_rank_fraction": 0.111803,
+        "mean_mape_raw_rank_gt_1000_pct": 18.46,
+        "mean_within_10pct_rank_accuracy_pct": 32.42,
+        "residual_std_fraction": 0.076316,
+        "predictions_are_not_collapsed_to_1": true
+      }
+    }
+  }
+}

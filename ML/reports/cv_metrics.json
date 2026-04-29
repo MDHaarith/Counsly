@@ -1,0 +1,118 @@
+{
+  "model_version": "closing_rank_lgbm_v1",
+  "params": {
+    "objective": "regression",
+    "metric": "rmse",
+    "num_leaves": 63,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "min_child_samples": 20,
+    "verbosity": -1,
+    "seed": 42
+  },
+  "feature_columns": [
+    "year",
+    "round_number",
+    "community",
+    "college_code",
+    "branch_code",
+    "closing_rank_lag_1",
+    "closing_rank_lag_2",
+    "closing_rank_delta_1",
+    "closing_rank_ema_3",
+    "seats_community",
+    "seats_total",
+    "seats_ratio",
+    "total_applicants",
+    "community_applicants",
+    "applicant_ratio",
+    "community_applicants_lag_1",
+    "total_applicants_lag_1",
+    "lag_1_applicant_scaled",
+    "lag_1_community_scaled",
+    "combo_avg_closing",
+    "college_avg_closing",
+    "branch_avg_closing",
+    "combo_years_of_data",
+    "seats_per_applicant",
+    "competition_score"
+  ],
+  "categorical_features": [
+    "community",
+    "college_code",
+    "branch_code"
+  ],
+  "folds": [
+    {
+      "train_years": [
+        2020,
+        2021
+      ],
+      "valid_year": 2022,
+      "rows_train": 31154,
+      "rows_valid": 16701,
+      "best_iteration": 76,
+      "rmse_log": 0.2614,
+      "mape_raw_rank_gt_1000_pct": 21.59,
+      "within_10pct_accuracy_pct": 33.08,
+      "residual_std_raw": 18591.04
+    },
+    {
+      "train_years": [
+        2020,
+        2021,
+        2022
+      ],
+      "valid_year": 2023,
+      "rows_train": 47855,
+      "rows_valid": 16099,
+      "best_iteration": 311,
+      "rmse_log": 0.3108,
+      "mape_raw_rank_gt_1000_pct": 23.86,
+      "within_10pct_accuracy_pct": 15.1,
+      "residual_std_raw": 21013.19
+    },
+    {
+      "train_years": [
+        2020,
+        2021,
+        2022,
+        2023
+      ],
+      "valid_year": 2024,
+      "rows_train": 63954,
+      "rows_valid": 17494,
+      "best_iteration": 244,
+      "rmse_log": 0.224,
+      "mape_raw_rank_gt_1000_pct": 16.45,
+      "within_10pct_accuracy_pct": 37.92,
+      "residual_std_raw": 18433.18
+    },
+    {
+      "train_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "valid_year": 2025,
+      "rows_train": 81448,
+      "rows_valid": 19622,
+      "best_iteration": 86,
+      "rmse_log": 0.2952,
+      "mape_raw_rank_gt_1000_pct": 20.78,
+      "within_10pct_accuracy_pct": 25.1,
+      "residual_std_raw": 24345.97
+    }
+  ],
+  "summary": {
+    "mean_rmse_log": 0.2729,
+    "mean_mape_raw_rank_gt_1000_pct": 20.67,
+    "mean_within_10pct_accuracy_pct": 27.8,
+    "residual_std_raw": 20595.85,
+    "final_num_boost_round": 179
+  }
+}

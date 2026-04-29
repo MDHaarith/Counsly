@@ -1,60 +1,123 @@
-# Counsly ML Workspace
+# Counsly ML Pipeline
 
-This folder contains the local data inputs for rank-prediction experiments.
-The source-of-truth copies remain under `supabase_db/seed_data`; files here are
-working copies for ML analysis.
+This workspace builds production prediction data for Counsly. Raw inputs are
+read-only copies from the Supabase seed workspace; generated training data,
+models, metrics, and SQL load files stay under `ML/`.
 
-## Raw Data
+## Architecture
 
-| File | Source | Rows | Purpose |
-|---|---|---:|---|
-| `data/raw/general_rank_list_2020_2025.csv` | `supabase_db/seed_data/rank_lookup/general_rank_list_2020_2025.csv` | 1,017,768 | Primary training data for aggregate-mark to rank/percentile modeling |
-| `data/raw/cutoffs_2020_2025_training_ready.csv` | `supabase_db/seed_data/cutoff_data/cutoffs_2020_2025_training_ready.csv` | 554,166 | Validation/outcome-analysis data for recommendation behavior |
+The production pipeline uses LightGBM, not the earlier TinyMLP experiment.
 
-## Recommended Rank Model
+1. **Closing-rank model** predicts `predicted_closing_rank` for each
+   `(year, round, community, college, branch)` row. The target is
+   `log1p(closing_rank)`, where closing rank is the historical max rank from
+   allotment cutoffs. Production output blends the LightGBM prediction with the
+   exact-combo historical prior recorded in `combo_avg_closing`.
+2. **Rank-band models** predict community rank fraction from whole-mark buckets.
+   Separate LightGBM models are trained for OC, BC, BCM, MBC, SC, plus one
+   shared sparse-community model for SCA and ST.
 
-Use total students per year as a training feature or normalization factor.
-Raw rank depends on cohort size, so the safer model is:
+Rank modeling uses 1-point mark buckets only. Percentiles are stored as whole
+numbers where bucket reports need percentile values.
 
-```text
-whole-mark bucket -> historical percentile band
-historical percentile band * expected_total_students -> predicted rank band
-```
+## Raw Inputs
 
-For 2026, set an expected cohort size and convert percentile bands back into
-rank bands. This avoids treating rank 20,000 as equivalent across years with
-different applicant counts.
+| File | Purpose |
+|---|---|
+| `data/raw/cutoffs_2020_2025_training_ready.csv` | Closing-rank targets from allotment output |
+| `data/raw/general_rank_list_2020_2025.csv` | Mark-to-community-rank training source |
+| `../supabase_db/seed_data/community_seats/seat_matrix_2025_round_1.json` | Seat-count features and 2026 prediction combos |
 
-Bucket the GRL to **1-point mark bands** only. That means whole-number buckets
-via floor rounding: `77.99 -> 77`, `84.10 -> 84`. Do not use `0.25` or `0.5`
-mark aggregation for the ML workspace.
+## Run
 
-Store percentiles as whole-number percentages too. The bucket report writes
-`percentile_min` and `percentile_max` as integers from `0` to `100`, not
-decimal fractions.
-
-## Profiling
-
-Generate yearly cohort totals and summary stats:
+Install dependencies:
 
 ```bash
-python3 ML/scripts/profile_rank_data.py
+python3 -m venv ML/.venv
+ML/.venv/bin/pip install -r ML/requirements.txt
 ```
 
-This writes:
-
-- `ML/reports/rank_year_summary.csv`
-- `ML/reports/community_year_counts.csv`
-
-Generate 1-mark training buckets:
+Build closing-rank training rows:
 
 ```bash
-python3 ML/scripts/build_rank_buckets.py
+python3 ML/scripts/build_training_data.py
 ```
 
-This writes:
+Train the closing-rank model:
 
-- `ML/reports/rank_mark_buckets_1pt.csv`
+```bash
+python3 ML/scripts/train_closing_rank_model.py
+```
 
-Use `rank_year_summary.csv` to choose `EXPECTED_TOTAL_STUDENTS` for 2026 or to
-train a model with cohort size as an explicit feature.
+Train rank-band models:
+
+```bash
+python3 ML/scripts/train_rank_model.py
+```
+
+Generate 2026 CSV and SQL prediction files:
+
+```bash
+python3 ML/scripts/generate_predictions.py
+```
+
+Load predictions into Supabase/PostgreSQL:
+
+```bash
+DATABASE_URL='postgresql://...' python3 backend/scripts/load_predictions.py
+```
+
+## Outputs
+
+| Output | Purpose |
+|---|---|
+| `data/training_data_closing_ranks.csv` | Feature table for closing-rank training |
+| `models/closing_rank_model_v1.txt` | LightGBM closing-rank model |
+| `models/preprocessors.joblib` | Closing-rank feature metadata |
+| `models/rank_model_*.txt` | LightGBM rank-fraction models |
+| `models/rank_preprocessors.joblib` | Rank feature metadata and 2026 cohort estimates |
+| `reports/cv_metrics.json` | Closing-rank CV metrics |
+| `reports/rank_model_metrics.json` | Rank-model CV metrics |
+| `reports/feature_importance.csv` | Closing-rank feature importances |
+| `predictions/closing_ranks_2026.csv` | DB-ready predicted closing ranks |
+| `predictions/closing_ranks_2026.sql` | Bulk insert SQL for closing ranks |
+| `predictions/rank_bands_2026.csv` | DB-ready predicted rank bands |
+| `predictions/rank_bands_2026.sql` | Bulk insert SQL for rank bands |
+
+## Evaluation
+
+Closing-rank CV uses year-based folds:
+
+- Train 2020-2021, validate 2022
+- Train 2020-2022, validate 2023
+- Train 2020-2023, validate 2024
+- Train 2020-2024, validate 2025
+
+Metrics are RMSE on log rank, raw-rank MAPE for ranks above 1000, and within
+10% band accuracy. `reports/cv_metrics.json` is the launch check source.
+
+Rank-band CV uses the same year split and checks rank-fraction RMSE, raw-rank
+MAPE for ranks above 1000, within-10% rank accuracy, and verifies predictions
+do not collapse to rank fraction `1.0`.
+
+## Production Flow
+
+`generate_predictions.py` writes rows for:
+
+- `predicted_closing_ranks`: used first by recommendations.
+- `predicted_rank_bands`: used first by onboarding rank guidance.
+
+The backend keeps `cutoff_data` and `rank_lookup` as fallback tables. UI copy
+labels whether data came from ML predictions or historical fallback.
+
+## Retraining
+
+When a new year arrives:
+
+1. Add the new raw cutoff and GRL rows under `ML/data/raw/`.
+2. Replace the latest seat matrix JSON under `supabase_db/seed_data`.
+3. Re-run build, train, and generate scripts.
+4. Review `reports/cv_metrics.json` and `reports/rank_model_metrics.json`.
+5. Apply `backend/migrations/005_predicted_closing_ranks.sql` if not already
+   applied.
+6. Load the generated CSVs with `backend/scripts/load_predictions.py`.

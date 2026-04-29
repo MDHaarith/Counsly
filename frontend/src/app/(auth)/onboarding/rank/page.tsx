@@ -17,6 +17,8 @@ interface RankBand {
   source_years: number[];
   is_abstain: boolean;
   disclaimer: string;
+  model_version: string | null;
+  data_source: "ml_prediction" | "historical";
 }
 
 export default function RankPage() {
@@ -30,8 +32,8 @@ export default function RankPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-serif text-[30px] font-medium leading-tight">Historical rank band</h1>
-        <p className="mt-2 text-sm leading-relaxed text-olive-gray">This is range guidance from historical data. Official TNEA rank replaces it when released.</p>
+        <h1 className="font-serif text-[30px] font-medium leading-tight">Rank band</h1>
+        <p className="mt-2 text-sm leading-relaxed text-olive-gray">This is range guidance from available TNEA data. Official TNEA rank replaces it when released.</p>
       </div>
       <Card variant="featured">
         {!rank && !error && <Skeleton className="h-24" />}
@@ -43,8 +45,10 @@ export default function RankPage() {
             <p className="mt-2 font-mono text-[34px] font-semibold leading-none">{rank.rank_min} - {rank.rank_max}</p>
             <div className="mt-4 flex items-center gap-2">
               <Badge>{rank.confidence_label} confidence</Badge>
+              <Badge>{rank.data_source === "ml_prediction" ? "ML-predicted range" : "Historical range"}</Badge>
               <span className="text-xs text-stone-gray">{rank.sample_size ?? 0} samples</span>
             </div>
+            {rank.model_version && <p className="mt-2 text-xs text-stone-gray">Model {rank.model_version}</p>}
           </div>
         )}
         {rank && <p className="mt-4 text-xs leading-relaxed text-stone-gray">{rank.disclaimer}</p>}

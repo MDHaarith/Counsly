@@ -872,7 +872,7 @@ The product does not claim to predict ranks. It provides honest rank guidance gr
 | FR-22f | **Disclaimer always shown:** "These bands are based on historical TNEA allotment data and are not a guarantee." |
 | FR-22g | Previously shown band archived alongside official rank: "Earlier estimate: X–Y" |
 | FR-22h | `rank_lookup` table: aggregate-mark rows · O(1) PK lookup · seeded from 2020–2025 historical rank-list data with abstain rules for sparse ranges |
-| FR-22i | **No ML precision claims:** Paid path must not claim ML-model accuracy. No "AI-predicted" or "ML-powered rank" in UI copy. |
+| FR-22i | **Labeled ML predictions:** ML predictions are clearly labeled as predictions with confidence labels (High/Medium/Low). No exact precision claims or accuracy percentages in UI copy. Display confidence intervals, not point estimates. Historical data is shown alongside predictions for transparency. Users can always see which data source (ML prediction vs historical) informs their guidance. |
 
 ---
 

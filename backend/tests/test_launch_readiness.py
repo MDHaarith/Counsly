@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import settings
+from app.db.queries import compute_safety
 from app.models import MarksRequest
 from app.routers import auth
 from app.routers.config import _round_dates
@@ -48,6 +49,13 @@ def test_round_dates_stop_at_first_gap(monkeypatch: pytest.MonkeyPatch) -> None:
         (1, "2026-07-01"),
         (2, "2026-07-05"),
     ]
+
+
+def test_compute_safety_uses_asymmetric_cutoff_band() -> None:
+    assert compute_safety(3800, 4500) == "safe"
+    assert compute_safety(4500, 4500) == "moderate"
+    assert compute_safety(4700, 4500) == "moderate"
+    assert compute_safety(5000, 4500) == "ambitious"
 
 
 def test_payment_signature_helpers_reject_invalid_signatures() -> None:

@@ -4,6 +4,7 @@ export type SafetyLabel = "safe" | "moderate" | "ambitious";
 export type AccessTier = "free" | "paid";
 export type RestrictionReason = "plan_limit" | "tnea_phase" | "data_not_ready";
 export type TNEAPhase = 1 | 2 | 3 | 4 | 5;
+export type DataSource = "ml_prediction" | "historical";
 
 export interface StudentProfile {
   id: string;
@@ -75,6 +76,8 @@ export interface RankLookup {
   sourceYears: number[];
   isAbstain: boolean;
   disclaimer: string;
+  dataSource: DataSource;
+  modelVersion?: string | null;
 }
 
 export interface Recommendation {
@@ -84,6 +87,11 @@ export interface Recommendation {
   branchName: string;
   district: string | null;
   cutoffRank: number | null;
+  predictionLower?: number | null;
+  predictionUpper?: number | null;
+  predictionConfidence?: "High" | "Medium" | "Low" | null;
+  modelVersion?: string | null;
+  dataSource: DataSource;
   safety: SafetyLabel | null;
   seasonYear: number | null;
   isLocked: boolean;

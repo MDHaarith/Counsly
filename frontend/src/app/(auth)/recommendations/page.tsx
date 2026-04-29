@@ -17,6 +17,11 @@ interface RecommendationItem {
   branch_name: string;
   district: string | null;
   cutoff_rank: number | null;
+  prediction_lower: number | null;
+  prediction_upper: number | null;
+  prediction_confidence: "High" | "Medium" | "Low" | null;
+  model_version: string | null;
+  data_source: "ml_prediction" | "historical";
   safety: SafetyLabel | null;
   season_year: number | null;
 }
@@ -66,10 +71,19 @@ export default function RecommendationsPage() {
                 <h2 className="font-serif text-lg font-medium leading-snug">{item.college_name}</h2>
                 <p className="mt-1 text-sm text-olive-gray">{item.branch_name} · {item.district ?? "District pending"}</p>
               </div>
-              {item.safety && <Badge variant={item.safety}>{item.safety}</Badge>}
+              <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                {item.safety && <Badge variant={item.safety}>{item.safety}</Badge>}
+                <Badge>{item.data_source === "ml_prediction" ? "ML" : "Historical"}</Badge>
+                {item.prediction_confidence && <Badge>{item.prediction_confidence} confidence</Badge>}
+              </div>
             </div>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="font-mono text-sm text-stone-gray">Cutoff rank {item.cutoff_rank ?? "-"}</p>
+              <div>
+                <p className="font-mono text-sm text-stone-gray">Cutoff rank {item.cutoff_rank ?? "-"}</p>
+                {item.prediction_lower && item.prediction_upper && (
+                  <p className="mt-1 font-mono text-xs text-stone-gray">{item.prediction_lower} - {item.prediction_upper}</p>
+                )}
+              </div>
               <Button variant="secondary" className="w-auto" onClick={() => add(item)} disabled={adding === `${item.college_code}-${item.branch_code}`}>{adding ? "Adding" : "Add"}</Button>
             </div>
           </Card>
