@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from seed_utils import first_value, load_rows
+from seed_utils import first_value, load_rows, normalize_community
 
 DEFAULT_SOURCE = (
     Path(__file__).resolve().parents[2]
@@ -24,7 +24,7 @@ def row_tuple(row: dict[str, Any]) -> tuple[Any, ...]:
         first_value(row, "round_number", "round", default=1),
         first_value(row, "aggregate_mark", "aggregate mark"),
         first_value(row, "general_rank", "rank"),
-        first_value(row, "community_quota", "community"),
+        normalize_community(first_value(row, "community_quota", "community")),
         first_value(row, "community"),
         first_value(row, "college_code", "college"),
         first_value(row, "branch_code", "branch"),

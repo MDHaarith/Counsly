@@ -50,7 +50,7 @@
 
 ## The Problem
 
-TNEA serves over 1.5 lakh students navigating **430 colleges** (excluding architecture), **107 branch codes**, **7 community quotas** (OC/BC/BCM/MBC/SC/SCA/ST), **3 counselling rounds**, and **6 confirmation options per round** — with almost no structured guidance.
+TNEA serves over 1.5 lakh students navigating **430 colleges** (excluding architecture), **107 branch codes**, **6 app-facing community quotas** (OC/BC/BCM/MBC/SC/ST), **3 counselling rounds**, and **6 confirmation options per round** — with almost no structured guidance.
 
 **Minimum eligibility:** 90/200 marks (Maths 0–100, Physics 0–100, Chemistry 0–100, whole integers). Hard gate applied at onboarding Step 1 in TNEA Phase 2 and above. The formula is:
 `Maths + (Physics + Chemistry) / 2`
@@ -195,7 +195,7 @@ This repo is **not** currently running on a Supabase-first schema. It is running
 
 **Notes:**
 - This is the cleanest current source for historical allotment ingestion.
-- `MBCDNC`, `MBCV`, and `SCA` were normalized away in the training-ready file.
+- `MBCDNC` and `MBCV` were normalized away in the training-ready file. Any raw `SCA` values are folded into app-facing `SC`.
 - Architecture-only colleges and architecture/design branches were removed from the training-ready export.
 
 **Suggested destination table:** `cutoff_data`
@@ -403,7 +403,7 @@ There is no 2026 per-round output under the current `Allotement/data/processed/`
 
 **Notes:**
 - This file is the real source for both a `college_branches` mapping and a `community_seats` table.
-- `SCA` still appears here in seat allocations, even though the training-ready allotment dataset normalizes communities differently.
+- `SCA` still appears here in raw seat allocations, but app-facing guidance folds it into `SC`.
 
 **Suggested destination tables:**
 - `college_branches`
@@ -1215,7 +1215,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 - Every mutable table must include `created_at timestamptz` and `updated_at timestamptz`.
 - Every audit table is append-only. Audit rows are never updated in place.
 - Preserve source-truth values in `source_*` columns when the app-facing normalized value differs from the raw source.
-- App-facing community taxonomy is fixed to `OC`, `BC`, `BCM`, `MBC`, `SC`, `SCA`, `ST`. Raw values such as `MBCDNC` and `MBCV` must be preserved, then normalized for app use.
+- App-facing community taxonomy is fixed to `OC`, `BC`, `BCM`, `MBC`, `SC`, `ST`. Raw values such as `MBCDNC`, `MBCV`, and `SCA` must be preserved, then normalized for app use; `SCA` maps to `SC`.
 - `rank_lookup` is a curated derived table, not a raw-ingestion table.
 - No automatic data deletion in v2.0. Archival states are explicit.
 
@@ -1223,7 +1223,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 
 | Domain | Allowed values | Notes |
 | --- | --- | --- |
-| `community_quota` | `OC`, `BC`, `BCM`, `MBC`, `SC`, `SCA`, `ST` | App-facing taxonomy |
+| `community_quota` | `OC`, `BC`, `BCM`, `MBC`, `SC`, `ST` | App-facing taxonomy |
 | `workspace_kind` | `personal` | One PDE per user in v2.0 |
 | `preference_group` | `wishlist`, `primary`, `pinned` | `primary` is the actual ordered choice list |
 | `safety_category` | `safe`, `moderate`, `ambitious` | Stored in lowercase even if rendered as title case |
@@ -1306,7 +1306,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 
 - Keep raw source community values in `source_community_raw`.
 - Normalize `MBCDNC` and `MBCV` into app-facing `MBC`, but do not overwrite raw-ingestion truth.
-- Keep `SCA` as a first-class app-facing quota in `community_seats`, `student_profiles`, and rendered guidance.
+- Keep raw `sca` seat columns for traceability, but merge those seats into app-facing `SC` guidance and do not expose `SCA` as a separate student quota.
 - Normalize geo columns to `latitude` and `longitude` in final tables even if source files differ.
 - `college_code` and `branch_code` remain the only accepted natural foreign keys across reference tables.
 
@@ -1759,7 +1759,7 @@ Every Telegram bot write must insert a row in `admin_audit_log` with:
 | Roll number | Official DTE identifier — TNEA Phase 4 identity gate |
 | ROLL_DATA_READY | app_config flag — true only after rank list ingestion completes successfully |
 | BROADCAST_ACTIVE | app_config flag — true when an active broadcast banner should be shown on all authenticated screens |
-| Community quota | OC · BC · BCM · MBC · SC · SCA · ST |
+| Community quota | OC · BC · BCM · MBC · SC · ST |
 | Codex | Build executor for all implementation work |
 | 402 | HTTP status returned for paid features accessed by free users |
 | DPDP | Digital Personal Data Protection Act 2023 |

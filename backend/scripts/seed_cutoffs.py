@@ -1,6 +1,6 @@
 """Generate offline SQL for historical cutoff rows."""
 
-from seed_utils import build_seed_sql, first_value
+from seed_utils import build_seed_sql, first_value, normalize_community
 
 
 def main() -> None:
@@ -12,7 +12,7 @@ def main() -> None:
             ("round_number", lambda row: first_value(row, "round_number", "round", default=1)),
             ("aggregate_mark", lambda row: first_value(row, "aggregate_mark", "aggregate mark", "mark", "aggregate")),
             ("general_rank", lambda row: first_value(row, "general_rank", "rank")),
-            ("community_quota", lambda row: first_value(row, "community_quota", "community")),
+            ("community_quota", lambda row: normalize_community(first_value(row, "community_quota", "community"))),
             ("source_community_raw", lambda row: first_value(row, "source_community_raw", "community")),
             ("college_code", lambda row: first_value(row, "college_code", "college")),
             ("branch_code", lambda row: first_value(row, "branch_code", "branch")),

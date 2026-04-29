@@ -41,8 +41,7 @@
     "SC": [
       "SC"
     ],
-    "small_community": [
-      "SCA",
+    "ST": [
       "ST"
     ]
   },
@@ -52,8 +51,7 @@
     "BCM": "BCM",
     "MBC": "MBC",
     "SC": "SC",
-    "SCA": "small_community",
-    "ST": "small_community"
+    "ST": "ST"
   },
   "models": {
     "OC": {
@@ -414,8 +412,8 @@
         "SC"
       ],
       "model_path": "models/rank_model_SC.txt",
-      "rows": 737,
-      "final_num_boost_round": 118,
+      "rows": 739,
+      "final_num_boost_round": 131,
       "folds": [
         {
           "train_years": [
@@ -425,13 +423,13 @@
           "valid_year": 2022,
           "rows_train": 244,
           "rows_valid": 124,
-          "best_iteration": 11,
-          "rmse_rank_fraction": 0.249765,
-          "mape_raw_rank_gt_1000_pct": 113.35,
-          "within_10pct_rank_accuracy_pct": 13.71,
-          "residual_std_fraction": 0.16093,
-          "predicted_fraction_min": 0.071399,
-          "predicted_fraction_max": 0.856378
+          "best_iteration": 10,
+          "rmse_rank_fraction": 0.251293,
+          "mape_raw_rank_gt_1000_pct": 125.06,
+          "within_10pct_rank_accuracy_pct": 12.9,
+          "residual_std_fraction": 0.165162,
+          "predicted_fraction_min": 0.083867,
+          "predicted_fraction_max": 0.843116
         },
         {
           "train_years": [
@@ -442,13 +440,13 @@
           "valid_year": 2023,
           "rows_train": 368,
           "rows_valid": 123,
-          "best_iteration": 185,
-          "rmse_rank_fraction": 0.064652,
-          "mape_raw_rank_gt_1000_pct": 13.77,
-          "within_10pct_rank_accuracy_pct": 34.96,
-          "residual_std_fraction": 0.056468,
-          "predicted_fraction_min": 0.000525,
-          "predicted_fraction_max": 0.999671
+          "best_iteration": 145,
+          "rmse_rank_fraction": 0.068644,
+          "mape_raw_rank_gt_1000_pct": 15.24,
+          "within_10pct_rank_accuracy_pct": 28.46,
+          "residual_std_fraction": 0.060166,
+          "predicted_fraction_min": 0.000482,
+          "predicted_fraction_max": 0.999438
         },
         {
           "train_years": [
@@ -460,13 +458,13 @@
           "valid_year": 2024,
           "rows_train": 491,
           "rows_valid": 124,
-          "best_iteration": 67,
-          "rmse_rank_fraction": 0.019277,
-          "mape_raw_rank_gt_1000_pct": 5.14,
-          "within_10pct_rank_accuracy_pct": 70.97,
-          "residual_std_fraction": 0.0188,
-          "predicted_fraction_min": 0.001023,
-          "predicted_fraction_max": 0.998249
+          "best_iteration": 60,
+          "rmse_rank_fraction": 0.021291,
+          "mape_raw_rank_gt_1000_pct": 5.19,
+          "within_10pct_rank_accuracy_pct": 68.55,
+          "residual_std_fraction": 0.021268,
+          "predicted_fraction_min": 0.001188,
+          "predicted_fraction_max": 0.998078
         },
         {
           "train_years": [
@@ -478,33 +476,32 @@
           ],
           "valid_year": 2025,
           "rows_train": 615,
-          "rows_valid": 122,
-          "best_iteration": 210,
-          "rmse_rank_fraction": 0.049913,
-          "mape_raw_rank_gt_1000_pct": 13.39,
-          "within_10pct_rank_accuracy_pct": 33.61,
-          "residual_std_fraction": 0.027857,
-          "predicted_fraction_min": 0.000257,
-          "predicted_fraction_max": 0.999481
+          "rows_valid": 124,
+          "best_iteration": 310,
+          "rmse_rank_fraction": 0.047739,
+          "mape_raw_rank_gt_1000_pct": 13.05,
+          "within_10pct_rank_accuracy_pct": 35.48,
+          "residual_std_fraction": 0.02659,
+          "predicted_fraction_min": 0.000232,
+          "predicted_fraction_max": 0.999939
         }
       ],
       "summary": {
-        "mean_rmse_rank_fraction": 0.095902,
-        "mean_mape_raw_rank_gt_1000_pct": 36.41,
-        "mean_within_10pct_rank_accuracy_pct": 38.31,
-        "residual_std_fraction": 0.066014,
+        "mean_rmse_rank_fraction": 0.097242,
+        "mean_mape_raw_rank_gt_1000_pct": 39.64,
+        "mean_within_10pct_rank_accuracy_pct": 36.35,
+        "residual_std_fraction": 0.068296,
         "predictions_are_not_collapsed_to_1": true
       }
     },
-    "small_community": {
-      "model_name": "small_community",
+    "ST": {
+      "model_name": "ST",
       "communities": [
-        "SCA",
         "ST"
       ],
-      "model_path": "models/rank_model_small_community.txt",
-      "rows": 1358,
-      "final_num_boost_round": 152,
+      "model_path": "models/rank_model_ST.txt",
+      "rows": 651,
+      "final_num_boost_round": 111,
       "folds": [
         {
           "train_years": [
@@ -512,15 +509,15 @@
             2021
           ],
           "valid_year": 2022,
-          "rows_train": 424,
-          "rows_valid": 235,
-          "best_iteration": 13,
-          "rmse_rank_fraction": 0.280597,
-          "mape_raw_rank_gt_1000_pct": 43.22,
-          "within_10pct_rank_accuracy_pct": 8.09,
-          "residual_std_fraction": 0.170068,
-          "predicted_fraction_min": 0.067863,
-          "predicted_fraction_max": 0.876844
+          "rows_train": 196,
+          "rows_valid": 115,
+          "best_iteration": 11,
+          "rmse_rank_fraction": 0.266037,
+          "mape_raw_rank_gt_1000_pct": 0.0,
+          "within_10pct_rank_accuracy_pct": 12.17,
+          "residual_std_fraction": 0.164786,
+          "predicted_fraction_min": 0.133005,
+          "predicted_fraction_max": 0.862001
         },
         {
           "train_years": [
@@ -529,15 +526,15 @@
             2022
           ],
           "valid_year": 2023,
-          "rows_train": 659,
-          "rows_valid": 223,
-          "best_iteration": 365,
-          "rmse_rank_fraction": 0.093171,
-          "mape_raw_rank_gt_1000_pct": 19.11,
-          "within_10pct_rank_accuracy_pct": 16.14,
-          "residual_std_fraction": 0.08187,
-          "predicted_fraction_min": 0.000788,
-          "predicted_fraction_max": 0.999813
+          "rows_train": 311,
+          "rows_valid": 107,
+          "best_iteration": 290,
+          "rmse_rank_fraction": 0.08116,
+          "mape_raw_rank_gt_1000_pct": 0.0,
+          "within_10pct_rank_accuracy_pct": 28.04,
+          "residual_std_fraction": 0.076867,
+          "predicted_fraction_min": 0.002379,
+          "predicted_fraction_max": 0.998216
         },
         {
           "train_years": [
@@ -547,15 +544,15 @@
             2023
           ],
           "valid_year": 2024,
-          "rows_train": 882,
-          "rows_valid": 235,
+          "rows_train": 418,
+          "rows_valid": 115,
           "best_iteration": 52,
-          "rmse_rank_fraction": 0.019556,
-          "mape_raw_rank_gt_1000_pct": 3.46,
-          "within_10pct_rank_accuracy_pct": 68.94,
-          "residual_std_fraction": 0.019465,
-          "predicted_fraction_min": 0.002988,
-          "predicted_fraction_max": 0.993541
+          "rmse_rank_fraction": 0.029049,
+          "mape_raw_rank_gt_1000_pct": 1.91,
+          "within_10pct_rank_accuracy_pct": 65.22,
+          "residual_std_fraction": 0.02903,
+          "predicted_fraction_min": 0.005432,
+          "predicted_fraction_max": 0.994672
         },
         {
           "train_years": [
@@ -566,22 +563,22 @@
             2024
           ],
           "valid_year": 2025,
-          "rows_train": 1117,
-          "rows_valid": 241,
-          "best_iteration": 178,
-          "rmse_rank_fraction": 0.053889,
-          "mape_raw_rank_gt_1000_pct": 8.04,
-          "within_10pct_rank_accuracy_pct": 36.51,
-          "residual_std_fraction": 0.033861,
-          "predicted_fraction_min": 0.000656,
-          "predicted_fraction_max": 0.999884
+          "rows_train": 533,
+          "rows_valid": 118,
+          "best_iteration": 93,
+          "rmse_rank_fraction": 0.070532,
+          "mape_raw_rank_gt_1000_pct": 8.18,
+          "within_10pct_rank_accuracy_pct": 21.19,
+          "residual_std_fraction": 0.040976,
+          "predicted_fraction_min": 0.002652,
+          "predicted_fraction_max": 0.997978
         }
       ],
       "summary": {
-        "mean_rmse_rank_fraction": 0.111803,
-        "mean_mape_raw_rank_gt_1000_pct": 18.46,
-        "mean_within_10pct_rank_accuracy_pct": 32.42,
-        "residual_std_fraction": 0.076316,
+        "mean_rmse_rank_fraction": 0.111695,
+        "mean_mape_raw_rank_gt_1000_pct": 2.52,
+        "mean_within_10pct_rank_accuracy_pct": 31.66,
+        "residual_std_fraction": 0.077915,
         "predictions_are_not_collapsed_to_1": true
       }
     }

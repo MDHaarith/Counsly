@@ -23,7 +23,7 @@
 | Roll number | Official DTE identifier — TNEA Phase 4 identity gate |
 | ROLL_DATA_READY | app_config flag — true only after rank list ingestion completes successfully |
 | BROADCAST_ACTIVE | app_config flag — true when an active broadcast banner should be shown on all authenticated screens |
-| Community quota | OC · BC · BCM · MBC · SC · SCA · ST |
+| Community quota | OC · BC · BCM · MBC · SC · ST |
 | Codex | Build executor for all implementation work |
 | 402 | HTTP status returned for paid features accessed by free users |
 | DPDP | Digital Personal Data Protection Act 2023 |

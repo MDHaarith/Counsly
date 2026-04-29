@@ -10,7 +10,7 @@ from typing import Any
 
 DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[2] / "supabase_db" / "Data_Extractor"
 DEFAULT_SEED_ROOT = Path(__file__).resolve().parents[2] / "supabase_db" / "seed_data"
-REQUIRED_COMMUNITIES = {"OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"}
+REQUIRED_COMMUNITIES = {"OC", "BC", "BCM", "MBC", "SC", "ST"}
 
 
 def load_json(path: Path) -> Any:

@@ -26,7 +26,7 @@ RANK_PREPROCESSOR_PATH = MODEL_DIR / "rank_preprocessors.joblib"
 
 TARGET_YEAR = 2026
 ROUND_NUMBER = 1
-COMMUNITIES = ["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"]
+COMMUNITIES = ["OC", "BC", "BCM", "MBC", "SC", "ST"]
 
 
 def _sql_string(value: object) -> str:

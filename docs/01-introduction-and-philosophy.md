@@ -7,7 +7,7 @@
 
 ## The Problem
 
-TNEA serves over 1.5 lakh students navigating **430 colleges** (excluding architecture), **107 branch codes**, **7 community quotas** (OC/BC/BCM/MBC/SC/SCA/ST), **3 counselling rounds**, and **6 confirmation options per round** — with almost no structured guidance.
+TNEA serves over 1.5 lakh students navigating **430 colleges** (excluding architecture), **107 branch codes**, **6 app-facing community quotas** (OC/BC/BCM/MBC/SC/ST), **3 counselling rounds**, and **6 confirmation options per round** — with almost no structured guidance.
 
 **Minimum eligibility:** 90/200 marks (Maths 0–100, Physics 0–100, Chemistry 0–100, whole integers). Hard gate applied at onboarding Step 1 in TNEA Phase 2 and above. The formula is:
 `Maths + (Physics + Chemistry) / 2`

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 ColumnSpec = tuple[str, Any]
+COMMUNITY_ALIASES = {"SCA": "SC"}
 
 
 def parse_args(description: str) -> argparse.Namespace:
@@ -77,6 +78,13 @@ def first_value(row: dict[str, Any], *keys: str, default: Any = None) -> Any:
         if normalized_key in normalized and normalized[normalized_key] not in ("", None):
             return normalized[normalized_key]
     return default
+
+
+def normalize_community(value: Any) -> Any:
+    if value in ("", None):
+        return value
+    community = str(value).strip().upper()
+    return COMMUNITY_ALIASES.get(community, community)
 
 
 def sql_literal(value: Any) -> str:

@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RANK_SOURCE = ROOT / "data" / "raw" / "general_rank_list_2020_2025.csv"
 REPORT_DIR = ROOT / "reports"
+COMMUNITY_ALIASES = {"SCA": "SC"}
 
 
 def read_rows() -> list[dict[str, str]]:
@@ -26,7 +27,8 @@ def main() -> int:
     for row in rows:
         year = row["YEAR"]
         by_year[year].append(row)
-        community_counts[(year, row["COMMUNITY"])] += 1
+        community = COMMUNITY_ALIASES.get(row["COMMUNITY"].strip().upper(), row["COMMUNITY"].strip().upper())
+        community_counts[(year, community)] += 1
 
     summary_path = REPORT_DIR / "rank_year_summary.csv"
     with summary_path.open("w", encoding="utf-8", newline="") as handle:

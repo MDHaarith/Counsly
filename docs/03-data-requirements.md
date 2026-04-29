@@ -54,7 +54,7 @@ This repo is **not** currently running on a Supabase-first schema. It is running
 
 **Notes:**
 - This is the cleanest current source for historical allotment ingestion.
-- `MBCDNC`, `MBCV`, and `SCA` were normalized away in the training-ready file.
+- `MBCDNC` and `MBCV` were normalized away in the training-ready file. Any raw `SCA` values are folded into app-facing `SC`.
 - Architecture-only colleges and architecture/design branches were removed from the training-ready export.
 
 **Suggested destination table:** `cutoff_data`
@@ -269,7 +269,7 @@ There is no 2026 per-round output under the current `Allotement/data/processed/`
 
 **Notes:**
 - This file is the real source for both a `college_branches` mapping and a `community_seats` table.
-- `SCA` still appears here in seat allocations, even though the training-ready allotment dataset normalizes communities differently.
+- `SCA` still appears here in raw seat allocations, but app-facing guidance folds it into `SC`.
 
 **Suggested destination tables:**
 - `college_branches`

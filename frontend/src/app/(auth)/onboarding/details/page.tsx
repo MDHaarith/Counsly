@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { postJson } from "@/lib/api";
 import type { Board, Community } from "@/types";
 
-const communities: Community[] = ["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"];
+const communities: Community[] = ["OC", "BC", "BCM", "MBC", "SC", "ST"];
 const boards: Board[] = ["State", "CBSE", "ICSE"];
 
 export default function DetailsPage() {

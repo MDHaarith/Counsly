@@ -1,4 +1,4 @@
-export type Community = "OC" | "BC" | "BCM" | "MBC" | "SC" | "SCA" | "ST";
+export type Community = "OC" | "BC" | "BCM" | "MBC" | "SC" | "ST";
 export type Board = "State" | "CBSE" | "ICSE";
 export type SafetyLabel = "safe" | "moderate" | "ambitious";
 export type AccessTier = "free" | "paid";

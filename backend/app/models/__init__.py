@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Community = Literal["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"]
+Community = Literal["OC", "BC", "BCM", "MBC", "SC", "ST"]
 Board = Literal["State", "CBSE", "ICSE"]
 SafetyCategory = Literal["safe", "moderate", "ambitious"]
 FreshnessStatus = Literal["missing", "seeded_unverified", "verified", "stale", "disabled"]

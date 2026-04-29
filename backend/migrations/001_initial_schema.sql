@@ -75,7 +75,7 @@ CREATE TABLE student_profiles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_student_profiles_workspace_id UNIQUE (workspace_id),
-    CONSTRAINT chk_student_profiles_community CHECK (community_quota IS NULL OR community_quota IN ($$OC$$,$$BC$$,$$BCM$$,$$MBC$$,$$SC$$,$$SCA$$,$$ST$$))
+    CONSTRAINT chk_student_profiles_community CHECK (community_quota IS NULL OR community_quota IN ($$OC$$,$$BC$$,$$BCM$$,$$MBC$$,$$SC$$,$$ST$$))
 );
 ALTER TABLE student_profiles ENABLE ROW LEVEL SECURITY;
 CREATE INDEX idx_student_profiles_workspace_id ON student_profiles (workspace_id);
@@ -200,7 +200,7 @@ CREATE TABLE cutoff_data (
     source_file TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_cutoff_community CHECK (community_quota IN ($$OC$$,$$BC$$,$$BCM$$,$$MBC$$,$$SC$$,$$SCA$$,$$ST$$))
+    CONSTRAINT chk_cutoff_community CHECK (community_quota IN ($$OC$$,$$BC$$,$$BCM$$,$$MBC$$,$$SC$$,$$ST$$))
 );
 ALTER TABLE cutoff_data ENABLE ROW LEVEL SECURITY;
 CREATE INDEX idx_cutoff_data_season_round_community_college_branch ON cutoff_data (season_year, round_number, community_quota, college_code, branch_code);

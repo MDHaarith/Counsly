@@ -18,14 +18,15 @@ MODEL_DIR = ROOT / "models"
 METRICS_PATH = ROOT / "reports/rank_model_metrics.json"
 PREPROCESSOR_PATH = MODEL_DIR / "rank_preprocessors.joblib"
 
-COMMUNITIES = ["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"]
+COMMUNITIES = ["OC", "BC", "BCM", "MBC", "SC", "ST"]
+COMMUNITY_ALIASES = {"SCA": "SC"}
 MODEL_SPECS = {
     "OC": ["OC"],
     "BC": ["BC"],
     "BCM": ["BCM"],
     "MBC": ["MBC"],
     "SC": ["SC"],
-    "small_community": ["SCA", "ST"],
+    "ST": ["ST"],
 }
 COMMUNITY_MODEL = {
     "OC": "OC",
@@ -33,8 +34,7 @@ COMMUNITY_MODEL = {
     "BCM": "BCM",
     "MBC": "MBC",
     "SC": "SC",
-    "SCA": "small_community",
-    "ST": "small_community",
+    "ST": "ST",
 }
 FEATURE_COLUMNS = [
     "aggregate_mark",
@@ -88,7 +88,7 @@ def load_rank_buckets() -> pd.DataFrame:
     frame["aggregate_mark"] = pd.to_numeric(frame["aggregate_mark"], errors="coerce")
     frame["general_rank"] = pd.to_numeric(frame["general_rank"], errors="coerce")
     frame["community_rank"] = pd.to_numeric(frame["community_rank"], errors="coerce")
-    frame["community"] = frame["community"].astype(str).str.upper().str.strip()
+    frame["community"] = frame["community"].astype(str).str.upper().str.strip().replace(COMMUNITY_ALIASES)
     frame = frame.dropna(subset=["year", "aggregate_mark", "community_rank"])
     frame = frame[frame["community"].isin(COMMUNITIES)]
     frame["year"] = frame["year"].astype(int)
@@ -98,7 +98,9 @@ def load_rank_buckets() -> pd.DataFrame:
     year_totals = frame.groupby("year", as_index=False).size().rename(columns={"size": "year_total_students"})
     frame = frame.merge(community_totals, on=["year", "community"], how="left")
     frame = frame.merge(year_totals, on="year", how="left")
-    frame["rank_basis"] = np.where(frame["community"] == "OC", frame["general_rank"], frame["community_rank"])
+    frame = frame.sort_values(["year", "community", "general_rank"]).reset_index(drop=True)
+    frame["merged_community_rank"] = frame.groupby(["year", "community"]).cumcount() + 1
+    frame["rank_basis"] = np.where(frame["community"] == "OC", frame["general_rank"], frame["merged_community_rank"])
     frame["total_students"] = np.where(frame["community"] == "OC", frame["year_total_students"], frame["community_total_students"])
     frame["rank_fraction"] = (frame["rank_basis"].astype(float) / frame["total_students"].astype(float)).clip(1e-6, 1 - 1e-6)
 

@@ -53,11 +53,11 @@
       "valid_year": 2022,
       "rows_train": 31154,
       "rows_valid": 16701,
-      "best_iteration": 76,
-      "rmse_log": 0.2614,
-      "mape_raw_rank_gt_1000_pct": 21.59,
-      "within_10pct_accuracy_pct": 33.08,
-      "residual_std_raw": 18591.04
+      "best_iteration": 67,
+      "rmse_log": 0.2622,
+      "mape_raw_rank_gt_1000_pct": 21.73,
+      "within_10pct_accuracy_pct": 32.64,
+      "residual_std_raw": 18755.12
     },
     {
       "train_years": [
@@ -68,11 +68,11 @@
       "valid_year": 2023,
       "rows_train": 47855,
       "rows_valid": 16099,
-      "best_iteration": 311,
-      "rmse_log": 0.3108,
-      "mape_raw_rank_gt_1000_pct": 23.86,
-      "within_10pct_accuracy_pct": 15.1,
-      "residual_std_raw": 21013.19
+      "best_iteration": 459,
+      "rmse_log": 0.31,
+      "mape_raw_rank_gt_1000_pct": 23.8,
+      "within_10pct_accuracy_pct": 15.04,
+      "residual_std_raw": 20920.48
     },
     {
       "train_years": [
@@ -84,11 +84,11 @@
       "valid_year": 2024,
       "rows_train": 63954,
       "rows_valid": 17494,
-      "best_iteration": 244,
-      "rmse_log": 0.224,
-      "mape_raw_rank_gt_1000_pct": 16.45,
-      "within_10pct_accuracy_pct": 37.92,
-      "residual_std_raw": 18433.18
+      "best_iteration": 311,
+      "rmse_log": 0.2231,
+      "mape_raw_rank_gt_1000_pct": 16.37,
+      "within_10pct_accuracy_pct": 38.28,
+      "residual_std_raw": 18356.07
     },
     {
       "train_years": [
@@ -101,18 +101,18 @@
       "valid_year": 2025,
       "rows_train": 81448,
       "rows_valid": 19622,
-      "best_iteration": 86,
-      "rmse_log": 0.2952,
-      "mape_raw_rank_gt_1000_pct": 20.78,
-      "within_10pct_accuracy_pct": 25.1,
-      "residual_std_raw": 24345.97
+      "best_iteration": 83,
+      "rmse_log": 0.2959,
+      "mape_raw_rank_gt_1000_pct": 20.84,
+      "within_10pct_accuracy_pct": 24.37,
+      "residual_std_raw": 24424.53
     }
   ],
   "summary": {
-    "mean_rmse_log": 0.2729,
-    "mean_mape_raw_rank_gt_1000_pct": 20.67,
-    "mean_within_10pct_accuracy_pct": 27.8,
-    "residual_std_raw": 20595.85,
-    "final_num_boost_round": 179
+    "mean_rmse_log": 0.2728,
+    "mean_mape_raw_rank_gt_1000_pct": 20.69,
+    "mean_within_10pct_accuracy_pct": 27.58,
+    "residual_std_raw": 20614.05,
+    "final_num_boost_round": 230
   }
 }

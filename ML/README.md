@@ -14,8 +14,8 @@ The production pipeline uses LightGBM, not the earlier TinyMLP experiment.
    allotment cutoffs. Production output blends the LightGBM prediction with the
    exact-combo historical prior recorded in `combo_avg_closing`.
 2. **Rank-band models** predict community rank fraction from whole-mark buckets.
-   Separate LightGBM models are trained for OC, BC, BCM, MBC, SC, plus one
-   shared sparse-community model for SCA and ST.
+   Separate LightGBM models are trained for OC, BC, BCM, MBC, SC, and ST.
+   Raw `SCA` rows are folded into `SC` before training.
 
 Rank modeling uses 1-point mark buckets only. Percentiles are stored as whole
 numbers where bucket reports need percentile values.

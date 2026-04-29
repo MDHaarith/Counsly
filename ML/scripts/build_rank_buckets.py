@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RANK_SOURCE = ROOT / "data" / "raw" / "general_rank_list_2020_2025.csv"
 REPORT_DIR = ROOT / "reports"
 OUTPUT_PATH = REPORT_DIR / "rank_mark_buckets_1pt.csv"
+COMMUNITY_ALIASES = {"SCA": "SC"}
 
 
 def bucket_mark_1pt(value: str) -> int:
@@ -65,7 +66,8 @@ def main() -> int:
             marks = [Decimal(row["AGGREGATE MARK"]) for row in rows if row["AGGREGATE MARK"]]
             community_counts: dict[str, int] = defaultdict(int)
             for row in rows:
-                community_counts[row["COMMUNITY"]] += 1
+                community = COMMUNITY_ALIASES.get(row["COMMUNITY"].strip().upper(), row["COMMUNITY"].strip().upper())
+                community_counts[community] += 1
             community_modes = ";".join(
                 f"{community}:{count}" for community, count in sorted(community_counts.items(), key=lambda item: (-item[1], item[0]))[:5]
             )

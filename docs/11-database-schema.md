@@ -13,7 +13,7 @@
 - Every mutable table must include `created_at timestamptz` and `updated_at timestamptz`.
 - Every audit table is append-only. Audit rows are never updated in place.
 - Preserve source-truth values in `source_*` columns when the app-facing normalized value differs from the raw source.
-- App-facing community taxonomy is fixed to `OC`, `BC`, `BCM`, `MBC`, `SC`, `SCA`, `ST`. Raw values such as `MBCDNC` and `MBCV` must be preserved, then normalized for app use.
+- App-facing community taxonomy is fixed to `OC`, `BC`, `BCM`, `MBC`, `SC`, `ST`. Raw values such as `MBCDNC`, `MBCV`, and `SCA` must be preserved, then normalized for app use; `SCA` maps to `SC`.
 - `rank_lookup` is a curated derived table, not a raw-ingestion table.
 - No automatic data deletion in v2.0. Archival states are explicit.
 
@@ -21,7 +21,7 @@
 
 | Domain | Allowed values | Notes |
 | --- | --- | --- |
-| `community_quota` | `OC`, `BC`, `BCM`, `MBC`, `SC`, `SCA`, `ST` | App-facing taxonomy |
+| `community_quota` | `OC`, `BC`, `BCM`, `MBC`, `SC`, `ST` | App-facing taxonomy |
 | `workspace_kind` | `personal` | One PDE per user in v2.0 |
 | `preference_group` | `wishlist`, `primary`, `pinned` | `primary` is the actual ordered choice list |
 | `safety_category` | `safe`, `moderate`, `ambitious` | Stored in lowercase even if rendered as title case |
@@ -107,7 +107,7 @@
 
 - Keep raw source community values in `source_community_raw`.
 - Normalize `MBCDNC` and `MBCV` into app-facing `MBC`, but do not overwrite raw-ingestion truth.
-- Keep `SCA` as a first-class app-facing quota in `seat_matrix_current`, per-round `seat_matrix_2026_rN` tables, `community_seats`, `student_profiles`, and rendered guidance.
+- Keep raw `sca` seat columns for traceability, but merge those seats into app-facing `SC` guidance and do not expose `SCA` as a separate student quota.
 - Normalize geo columns to `latitude` and `longitude` in final tables even if source files differ.
 - `college_code` and `branch_code` remain the only accepted natural foreign keys across reference tables.
 

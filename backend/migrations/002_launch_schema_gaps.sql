@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS tnea_roll_numbers (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_tnea_roll_numbers_application UNIQUE (season_year, application_number),
     CONSTRAINT uq_tnea_roll_numbers_roll UNIQUE (season_year, roll_number),
-    CONSTRAINT chk_tnea_roll_numbers_community CHECK (community_quota IS NULL OR community_quota IN ($$OC$$,$$BC$$,$$BCM$$,$$MBC$$,$$SC$$,$$SCA$$,$$ST$$))
+    CONSTRAINT chk_tnea_roll_numbers_community CHECK (community_quota IS NULL OR community_quota IN ($$OC$$,$$BC$$,$$BCM$$,$$MBC$$,$$SC$$,$$ST$$))
 );
 ALTER TABLE tnea_roll_numbers ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_tnea_roll_numbers_season_rank

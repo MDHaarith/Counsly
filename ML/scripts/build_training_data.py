@@ -16,7 +16,8 @@ GRL_PATH = ROOT / "data/raw/general_rank_list_2020_2025.csv"
 SEAT_MATRIX_PATH = REPO_ROOT / "supabase_db/seed_data/community_seats/seat_matrix_2025_round_1.json"
 OUTPUT_PATH = ROOT / "data/training_data_closing_ranks.csv"
 
-COMMUNITIES = ["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"]
+COMMUNITIES = ["OC", "BC", "BCM", "MBC", "SC", "ST"]
+COMMUNITY_ALIASES = {"SCA": "SC"}
 CATEGORICAL_FEATURES = ["community", "college_code", "branch_code"]
 FEATURE_COLUMNS = [
     "year",
@@ -57,6 +58,10 @@ def _safe_divide(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
     return numerator.astype(float) / denominator.replace({0: np.nan}).astype(float)
 
 
+def normalize_community(series: pd.Series) -> pd.Series:
+    return series.astype(str).str.upper().str.strip().replace(COMMUNITY_ALIASES)
+
+
 def load_closing_targets() -> pd.DataFrame:
     cutoffs = _normalize_columns(
         pd.read_csv(
@@ -78,7 +83,7 @@ def load_closing_targets() -> pd.DataFrame:
     cutoffs["year"] = pd.to_numeric(cutoffs["year"], errors="coerce").astype("Int64")
     cutoffs["round_number"] = pd.to_numeric(cutoffs["round_number"], errors="coerce").astype("Int64")
     cutoffs["rank"] = pd.to_numeric(cutoffs["rank"], errors="coerce")
-    cutoffs["community"] = cutoffs["community"].astype(str).str.upper().str.strip()
+    cutoffs["community"] = normalize_community(cutoffs["community"])
     cutoffs["college_code"] = cutoffs["college_code"].astype(str).str.strip()
     cutoffs["branch_code"] = cutoffs["branch_code"].astype(str).str.upper().str.strip()
     cutoffs = cutoffs.dropna(subset=["year", "round_number", "rank"])
@@ -109,6 +114,8 @@ def load_seat_features() -> tuple[pd.DataFrame, dict[str, float]]:
         seats_total = float(row["total"])
         for community in COMMUNITIES:
             seats_community = float(pd.to_numeric(row.get(community.lower(), 0), errors="coerce") or 0)
+            if community == "SC":
+                seats_community += float(pd.to_numeric(row.get("sca", 0), errors="coerce") or 0)
             long_rows.append(
                 {
                     "college_code": row["college_code"],
@@ -130,7 +137,7 @@ def load_cohort_features() -> pd.DataFrame:
     grl = _normalize_columns(pd.read_csv(GRL_PATH, encoding="utf-8-sig", usecols=["YEAR", "COMMUNITY"]))
     grl = grl.rename(columns={"YEAR": "year", "COMMUNITY": "community"})
     grl["year"] = pd.to_numeric(grl["year"], errors="coerce").astype("Int64")
-    grl["community"] = grl["community"].astype(str).str.upper().str.strip()
+    grl["community"] = normalize_community(grl["community"])
     grl = grl.dropna(subset=["year"])
     grl = grl[grl["community"].isin(COMMUNITIES)]
     community_counts = (
