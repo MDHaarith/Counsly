@@ -1,0 +1,43 @@
+{
+  "abbreviations": {
+    "inst": "institute",
+    "tech": "technology",
+    "techno": "technology",
+    "engg": "engineering",
+    "eng": "engineering",
+    "arch": "architecture",
+    "archi": "architecture",
+    "poly": "polytechnic",
+    "univ": "university",
+    "dept": "department",
+    "sch": "school",
+    "coll": "college",
+    "govt": "government",
+    "gov": "government",
+    "womens": "women",
+    "coed": "co educational"
+  },
+  "alias_replacements": {
+    "aided": "",
+    "autonomous": "",
+    "(autonomous)": "",
+    "&": "and",
+    "womens": "women",
+    "womens'": "women"
+  },
+  "token_noise": [
+    "the",
+    "of",
+    "and",
+    "for",
+    "at",
+    "by",
+    "campus",
+    "block",
+    "division"
+  ],
+  "manual_query_expansions": {
+    "sap": "school of architecture and planning",
+    "ceg": "college of engineering guindy"
+  }
+}

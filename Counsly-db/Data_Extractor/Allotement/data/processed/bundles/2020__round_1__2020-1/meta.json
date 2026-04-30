@@ -1,0 +1,18 @@
+{
+  "source_pdf_abs_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/2020/2020-1/2020-1.pdf",
+  "source_pdf_rel_path": "2020/2020-1/2020-1.pdf",
+  "pdf_sha256": "f16732ba9b367cf6118042e43343c4a814aba9f868491cdb42f199070a9897df",
+  "file_size_bytes": "6869076",
+  "pdf_year": "2020",
+  "pdf_round": "1",
+  "title_line": "ACADEMIC STREAM -FIRST ROUND - PROVISIONAL ALLOTMENT LIST",
+  "bundle_dir": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2020__round_1__2020-1",
+  "pages_extracted": "259",
+  "record_rows": "7510",
+  "record_blocks_seen": "7510",
+  "parse_error_blocks": "0",
+  "unparsed_nonblank_lines": "2072",
+  "layout_types": "name_without_dob_community_mark_rank,name_without_dob_community_rank_mark",
+  "clean_csv_path": "/home/mdhaarith/Desktop/Data_Extractor/Inputs/Allotement/data/processed/bundles/2020__round_1__2020-1/records.csv",
+  "audit_files_written": "False"
+}

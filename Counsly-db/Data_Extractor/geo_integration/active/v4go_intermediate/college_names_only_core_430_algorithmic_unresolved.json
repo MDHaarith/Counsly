@@ -1,0 +1,16 @@
+[
+  {
+    "college_code": "2368",
+    "college_name": "Vishnu Lakshmi College of Engineering and Technology, Vellalore Post, Coimbatore District 641111",
+    "district": "COIMBATORE",
+    "normalized_name": "vishnu lakshmi engineering technology vellalore coimbatore 641111",
+    "is_corrupted_name": false
+  },
+  {
+    "college_code": "2712",
+    "college_name": "Kumaraguru College of Technology (Autonomous), Chinnavedampatti Post, Coimbatore District 641006",
+    "district": "COIMBATORE",
+    "normalized_name": "kumaraguru technology chinnavedampatti coimbatore 641006",
+    "is_corrupted_name": false
+  }
+]

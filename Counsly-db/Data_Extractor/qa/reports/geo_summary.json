@@ -1,0 +1,37 @@
+{
+  "legacy_clean_output": {
+    "exists": true,
+    "count": 466,
+    "with_coords": 466,
+    "with_coords_pct": 100.0,
+    "source_breakdown": {
+      "<missing>": 466
+    }
+  },
+  "legacy_unresolved": {
+    "exists": true,
+    "count": 0,
+    "with_coords": 0,
+    "with_coords_pct": 0.0,
+    "source_breakdown": {}
+  },
+  "active_clean_output": {
+    "exists": true,
+    "count": 464,
+    "with_coords": 464,
+    "with_coords_pct": 100.0,
+    "source_breakdown": {
+      "cache": 463,
+      "manual": 1
+    }
+  },
+  "active_unresolved": {
+    "exists": true,
+    "count": 2,
+    "with_coords": 0,
+    "with_coords_pct": 0.0,
+    "source_breakdown": {
+      "gosom": 2
+    }
+  }
+}

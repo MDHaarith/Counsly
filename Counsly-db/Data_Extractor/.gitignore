@@ -1,0 +1,18 @@
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual envs
+.venv/
+venv/
+
+# OS/editor noise
+.DS_Store
+
+# Generated extractor outputs
+Pass_Percentage/output/
+Seat_Matrix/output/
+
+# Local graph/cache artifacts
+.code-review-graph/

@@ -1,0 +1,28 @@
+[
+  {
+    "index": 176,
+    "original": "Vishnu Lakshmi College of Engineering and Technology, Vellalore Post, Coimbatore District 641111",
+    "query": "Vishnu Lakshmi College of Engineering and Technology, Vellalore Post, Coimbatore District 641111",
+    "latitude": null,
+    "longitude": null,
+    "maps_url": "",
+    "status": "unresolved",
+    "error": "provider error: context deadline exceeded",
+    "source": "gosom",
+    "note": "provider error: context deadline exceeded",
+    "extras": {}
+  },
+  {
+    "index": 242,
+    "original": "Kumaraguru College of Technology (Autonomous), Chinnavedampatti Post, Coimbatore District 641006",
+    "query": "Kumaraguru College of Technology (Autonomous), Chinnavedampatti Post, Coimbatore District 641006",
+    "latitude": null,
+    "longitude": null,
+    "maps_url": "",
+    "status": "unresolved",
+    "error": "provider error: context deadline exceeded",
+    "source": "gosom",
+    "note": "provider error: context deadline exceeded",
+    "extras": {}
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "name": "honest_tnea_college_ranking",
+  "version": "4.3",
+  "entrypoint": "algorithms/honest_ranking/run.py",
+  "canonical_source": {
+    "cli": "scripts/college_ranking.py",
+    "package_dir": "scripts/ranking"
+  },
+  "inputs": {
+    "allotment_csv": "data/processed/merged/merged_records_all_years_rounds_training_ready.csv",
+    "college_info_json": "../College_Info_Done/output_present_non_architecture.json",
+    "scrape_cache_dir": "data/rankings/scraped_cache"
+  },
+  "outputs": {
+    "json": "data/rankings/college_rankings.json",
+    "csv": "data/rankings/college_rankings.csv"
+  },
+  "weights": {
+    "selectivity": 0.35,
+    "academic_quality": 0.35,
+    "branch_strength": 0.12,
+    "institutional_quality": 0.08,
+    "web_reputation": 0.06,
+    "trend": 0.04
+  },
+  "excluded_signals": [
+    "seat_matrix",
+    "manual_prestige_prior"
+  ],
+  "notes": [
+    "This snapshot intentionally preserves the honest ranking configuration.",
+    "Anna University is not manually forced to the top.",
+    "Web scraping remains a capped support signal rather than the primary driver."
+  ]
+}

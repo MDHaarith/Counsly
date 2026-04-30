@@ -1,0 +1,1031 @@
+
+[
+  {
+    "branch_code": "AD",
+    "branch_name": "Artificial Intelligence and Data Science",
+    "observed_names": [
+      "Artificial Intelligence and Data Science"
+    ],
+    "row_count": 338,
+    "college_count": 338,
+    "total_seats": 18144,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "AE",
+    "branch_name": "AERONAUTICAL ENGINEERING",
+    "observed_names": [
+      "AERONAUTICAL ENGINEERING"
+    ],
+    "row_count": 37,
+    "college_count": 37,
+    "total_seats": 1105,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "AG",
+    "branch_name": "AGRICULTURAL ENGINEERING",
+    "observed_names": [
+      "AGRICULTURAL ENGINEERING"
+    ],
+    "row_count": 62,
+    "college_count": 62,
+    "total_seats": 2172,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "AL",
+    "branch_name": "Artificial Intelligence and Machine Learning",
+    "observed_names": [
+      "Artificial Intelligence and Machine Learning"
+    ],
+    "row_count": 13,
+    "college_count": 13,
+    "total_seats": 555,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "AM",
+    "branch_name": "COMPUTER SCIENCE AND ENGINEERING (AI AND MACHINE LEARNING)",
+    "observed_names": [
+      "COMPUTER SCIENCE AND ENGINEERING (AI AND MACHINE LEARNING)",
+      "Computer Science and Engineering (Artificial Intelligence and Machine Learning)"
+    ],
+    "row_count": 132,
+    "college_count": 132,
+    "total_seats": 4449,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "AO",
+    "branch_name": "AEROSPACE ENGINEERING",
+    "observed_names": [
+      "AEROSPACE ENGINEERING"
+    ],
+    "row_count": 4,
+    "college_count": 4,
+    "total_seats": 61,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "AU",
+    "branch_name": "AUTOMOBILE ENGINEERING",
+    "observed_names": [
+      "AUTOMOBILE ENGINEERING"
+    ],
+    "row_count": 23,
+    "college_count": 23,
+    "total_seats": 551,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "BC",
+    "branch_name": "Bio Technology and Bio Chemical Engineering",
+    "observed_names": [
+      "Bio Technology and Bio Chemical Engineering"
+    ],
+    "row_count": 2,
+    "college_count": 2,
+    "total_seats": 62,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "BM",
+    "branch_name": "BIO MEDICAL ENGINEERING",
+    "observed_names": [
+      "BIO MEDICAL ENGINEERING"
+    ],
+    "row_count": 105,
+    "college_count": 105,
+    "total_seats": 4256,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "BT",
+    "branch_name": "BIO TECHNOLOGY",
+    "observed_names": [
+      "BIO TECHNOLOGY"
+    ],
+    "row_count": 42,
+    "college_count": 42,
+    "total_seats": 1503,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CA",
+    "branch_name": "COMPUTER SCIENCE AND ENGINEERING(ARTIFICIAL INTELLIGENCE)",
+    "observed_names": [
+      "COMPUTER SCIENCE AND ENGINEERING(ARTIFICIAL INTELLIGENCE)"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 49,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CB",
+    "branch_name": "COMPUTER SCIENCE AND BUSSINESS SYSTEM",
+    "observed_names": [
+      "COMPUTER SCIENCE AND BUSSINESS SYSTEM"
+    ],
+    "row_count": 70,
+    "college_count": 70,
+    "total_seats": 2000,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CD",
+    "branch_name": "COMPUTER SCIENCE AND DESIGN",
+    "observed_names": [
+      "COMPUTER SCIENCE AND DESIGN"
+    ],
+    "row_count": 11,
+    "college_count": 11,
+    "total_seats": 350,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CE",
+    "branch_name": "CIVIL ENGINEERING",
+    "observed_names": [
+      "CIVIL ENGINEERING"
+    ],
+    "row_count": 273,
+    "college_count": 273,
+    "total_seats": 8100,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CF",
+    "branch_name": "COMPUTER SCIENCE AND ENGINEERING (DATA SCIENCE)",
+    "observed_names": [
+      "COMPUTER SCIENCE AND ENGINEERING (DATA SCIENCE)",
+      "Computer Science and Engineering (Data Science)"
+    ],
+    "row_count": 6,
+    "college_count": 6,
+    "total_seats": 201,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CH",
+    "branch_name": "CHEMICAL ENGINEERING",
+    "observed_names": [
+      "CHEMICAL ENGINEERING"
+    ],
+    "row_count": 27,
+    "college_count": 27,
+    "total_seats": 698,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CI",
+    "branch_name": "Computer Science and Engineering (Internet of Things)",
+    "observed_names": [
+      "Computer Science and Engineering (Internet of Things)"
+    ],
+    "row_count": 9,
+    "college_count": 9,
+    "total_seats": 365,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CJ",
+    "branch_name": "M.Tech. Computer Science and Engineering (Integrated 5 years)",
+    "observed_names": [
+      "M.Tech. Computer Science and Engineering (Integrated 5 years)"
+    ],
+    "row_count": 7,
+    "college_count": 7,
+    "total_seats": 167,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CK",
+    "branch_name": "Civil Engineering (Environmental Engineering)",
+    "observed_names": [
+      "Civil Engineering (Environmental Engineering)"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 55,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CO",
+    "branch_name": "COMPUTER AND COMMUNICATION ENGINEERING",
+    "observed_names": [
+      "COMPUTER AND COMMUNICATION ENGINEERING"
+    ],
+    "row_count": 10,
+    "college_count": 10,
+    "total_seats": 207,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CS",
+    "branch_name": "COMPUTER SCIENCE AND ENGINEERING",
+    "observed_names": [
+      "COMPUTER SCIENCE AND ENGINEERING",
+      "Computer Science and Engineering"
+    ],
+    "row_count": 417,
+    "college_count": 417,
+    "total_seats": 27129,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CX",
+    "branch_name": "CHEMICAL AND ELECTRO CHEMICAL ENGINEERING",
+    "observed_names": [
+      "CHEMICAL AND ELECTRO CHEMICAL ENGINEERING"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 28,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CY",
+    "branch_name": "Cyber Security",
+    "observed_names": [
+      "Cyber Security"
+    ],
+    "row_count": 3,
+    "college_count": 3,
+    "total_seats": 190,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "CZ",
+    "branch_name": "CIVIL AND STRUCTUTURAL ENGINEERING",
+    "observed_names": [
+      "CIVIL AND STRUCTUTURAL ENGINEERING"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 54,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EA",
+    "branch_name": "Electronics and Communication (Advanced Communication Technology)",
+    "observed_names": [
+      "Electronics and Communication (Advanced Communication Technology)"
+    ],
+    "row_count": 4,
+    "college_count": 4,
+    "total_seats": 66,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EC",
+    "branch_name": "ELECTRONICS AND COMMUNICATION ENGINEERING",
+    "observed_names": [
+      "ELECTRONICS AND COMMUNICATION ENGINEERING",
+      "Electronics and Communication Engineering"
+    ],
+    "row_count": 407,
+    "college_count": 407,
+    "total_seats": 19757,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EE",
+    "branch_name": "ELECTRICAL AND ELECTRONICS ENGINEERING",
+    "observed_names": [
+      "ELECTRICAL AND ELECTRONICS ENGINEERING",
+      "Electrical and Electronics Engineering"
+    ],
+    "row_count": 358,
+    "college_count": 358,
+    "total_seats": 12429,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EF",
+    "branch_name": "Electrical and Computer Engineering",
+    "observed_names": [
+      "Electrical and Computer Engineering"
+    ],
+    "row_count": 5,
+    "college_count": 5,
+    "total_seats": 170,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EI",
+    "branch_name": "ELECTRONICS AND INSTRUMENTATION ENGINEERING",
+    "observed_names": [
+      "ELECTRONICS AND INSTRUMENTATION ENGINEERING"
+    ],
+    "row_count": 20,
+    "college_count": 20,
+    "total_seats": 533,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EN",
+    "branch_name": "ENVIRONMENTAL ENGINEERING",
+    "observed_names": [
+      "ENVIRONMENTAL ENGINEERING"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 18,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "ER",
+    "branch_name": "ENVIRONMENTAL SCIENCE & TECHNOLOGY",
+    "observed_names": [
+      "ENVIRONMENTAL SCIENCE & TECHNOLOGY"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 27,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EV",
+    "branch_name": "Electronics Engineering (VLSI Design and Technology)",
+    "observed_names": [
+      "Electronics Engineering (VLSI Design and Technology)"
+    ],
+    "row_count": 24,
+    "college_count": 24,
+    "total_seats": 653,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "EX",
+    "branch_name": "Electronics and Computer Engineering",
+    "observed_names": [
+      "Electronics and Computer Engineering"
+    ],
+    "row_count": 3,
+    "college_count": 3,
+    "total_seats": 97,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "FD",
+    "branch_name": "FOOD TECHNOLOGY",
+    "observed_names": [
+      "FOOD TECHNOLOGY"
+    ],
+    "row_count": 20,
+    "college_count": 20,
+    "total_seats": 703,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "FT",
+    "branch_name": "FASHION TECHNOLOGY",
+    "observed_names": [
+      "FASHION TECHNOLOGY"
+    ],
+    "row_count": 8,
+    "college_count": 8,
+    "total_seats": 235,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "GI",
+    "branch_name": "GEO INFORMATICS",
+    "observed_names": [
+      "GEO INFORMATICS"
+    ],
+    "row_count": 3,
+    "college_count": 3,
+    "total_seats": 70,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "HT",
+    "branch_name": "HANDLOOM AND TEXTILE TECHNOLOGY",
+    "observed_names": [
+      "HANDLOOM AND TEXTILE TECHNOLOGY"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 23,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "IB",
+    "branch_name": "INDUSTRIAL BIO TECHNOLOGY",
+    "observed_names": [
+      "INDUSTRIAL BIO TECHNOLOGY"
+    ],
+    "row_count": 3,
+    "college_count": 3,
+    "total_seats": 92,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "IC",
+    "branch_name": "INSTRUMENTATION AND CONTROL ENGINEERING",
+    "observed_names": [
+      "INSTRUMENTATION AND CONTROL ENGINEERING"
+    ],
+    "row_count": 5,
+    "college_count": 5,
+    "total_seats": 74,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "IE",
+    "branch_name": "INDUSTRIAL ENGINEERING",
+    "observed_names": [
+      "INDUSTRIAL ENGINEERING"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 2,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "IN",
+    "branch_name": "INDUSTRIAL ENGINEERING AND MANAGEMENT",
+    "observed_names": [
+      "INDUSTRIAL ENGINEERING AND MANAGEMENT"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 27,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "IT",
+    "branch_name": "INFORMATION TECHNOLOGY",
+    "observed_names": [
+      "INFORMATION TECHNOLOGY"
+    ],
+    "row_count": 298,
+    "college_count": 298,
+    "total_seats": 14828,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "LE",
+    "branch_name": "LEATHER TECHNOLOGY",
+    "observed_names": [
+      "LEATHER TECHNOLOGY"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 41,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MB",
+    "branch_name": "Mechanical Engineering (Automobile)",
+    "observed_names": [
+      "Mechanical Engineering (Automobile)"
+    ],
+    "row_count": 2,
+    "college_count": 2,
+    "total_seats": 72,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MD",
+    "branch_name": "MEDICAL ELECTRONICS ENGINEERING",
+    "observed_names": [
+      "MEDICAL ELECTRONICS ENGINEERING"
+    ],
+    "row_count": 8,
+    "college_count": 8,
+    "total_seats": 300,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "ME",
+    "branch_name": "MECHANICAL ENGINEERING",
+    "observed_names": [
+      "MECHANICAL ENGINEERING",
+      "Mechanical Engineering"
+    ],
+    "row_count": 384,
+    "college_count": 384,
+    "total_seats": 15069,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MI",
+    "branch_name": "MINING ENGINEERING",
+    "observed_names": [
+      "MINING ENGINEERING"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 1,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MJ",
+    "branch_name": "Mechanical and Smart Manufacturing",
+    "observed_names": [
+      "Mechanical and Smart Manufacturing"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 54,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MM",
+    "branch_name": "MECHANICAL ENGINEERING (MANUFACTURING)",
+    "observed_names": [
+      "MECHANICAL ENGINEERING (MANUFACTURING)"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 55,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MN",
+    "branch_name": "MANUFACTURING ENGINEERING",
+    "observed_names": [
+      "MANUFACTURING ENGINEERING"
+    ],
+    "row_count": 2,
+    "college_count": 2,
+    "total_seats": 42,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MO",
+    "branch_name": "Mechanical and Mechatronics Engineering (Additive Manufacturing)",
+    "observed_names": [
+      "Mechanical and Mechatronics Engineering (Additive Manufacturing)"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 36,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MR",
+    "branch_name": "MARINE ENGINEERING",
+    "observed_names": [
+      "MARINE ENGINEERING"
+    ],
+    "row_count": 5,
+    "college_count": 5,
+    "total_seats": 133,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MT",
+    "branch_name": "METALLURGICAL ENGINEERING",
+    "observed_names": [
+      "METALLURGICAL ENGINEERING"
+    ],
+    "row_count": 2,
+    "college_count": 2,
+    "total_seats": 22,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MU",
+    "branch_name": "MECHANICAL AND AUTOMATION ENGINEERING",
+    "observed_names": [
+      "MECHANICAL AND AUTOMATION ENGINEERING"
+    ],
+    "row_count": 4,
+    "college_count": 4,
+    "total_seats": 123,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "MZ",
+    "branch_name": "Mechatronics Engineering",
+    "observed_names": [
+      "Mechatronics Engineering"
+    ],
+    "row_count": 33,
+    "college_count": 33,
+    "total_seats": 1047,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "PA",
+    "branch_name": "PLASTIC TECHNOLOGY",
+    "observed_names": [
+      "PLASTIC TECHNOLOGY"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 42,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "PC",
+    "branch_name": "PETRO CHEMICAL TECHNOLOGY",
+    "observed_names": [
+      "PETRO CHEMICAL TECHNOLOGY"
+    ],
+    "row_count": 7,
+    "college_count": 7,
+    "total_seats": 246,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "PE",
+    "branch_name": "PETROLEUM ENGINEERING",
+    "observed_names": [
+      "PETROLEUM ENGINEERING"
+    ],
+    "row_count": 4,
+    "college_count": 4,
+    "total_seats": 90,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "PH",
+    "branch_name": "PHARMACEUTICAL TECHNOLOGY",
+    "observed_names": [
+      "PHARMACEUTICAL TECHNOLOGY"
+    ],
+    "row_count": 9,
+    "college_count": 9,
+    "total_seats": 321,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "PR",
+    "branch_name": "PRODUCTION ENGINEERING",
+    "observed_names": [
+      "PRODUCTION ENGINEERING"
+    ],
+    "row_count": 3,
+    "college_count": 3,
+    "total_seats": 19,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "PT",
+    "branch_name": "PRINTING & PACKING TECHNOLOGY",
+    "observed_names": [
+      "PRINTING & PACKING TECHNOLOGY"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 9,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "RI",
+    "branch_name": "ROBOTICS AND ARTIFICIAL INTELLIGENCE",
+    "observed_names": [
+      "ROBOTICS AND ARTIFICIAL INTELLIGENCE"
+    ],
+    "row_count": 2,
+    "college_count": 2,
+    "total_seats": 74,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "RM",
+    "branch_name": "ROBOTICS AND AUTOMATION",
+    "observed_names": [
+      "ROBOTICS AND AUTOMATION"
+    ],
+    "row_count": 27,
+    "college_count": 27,
+    "total_seats": 735,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "RP",
+    "branch_name": "RUBBER AND PLASTIC TECHNOLOGY",
+    "observed_names": [
+      "RUBBER AND PLASTIC TECHNOLOGY"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 18,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "SB",
+    "branch_name": "Computer Science and Engineering (Internet of Things and Cyber Security including Block Chain Technology)",
+    "observed_names": [
+      "Computer Science and Engineering (Internet of Things and Cyber Security including Block Chain Technology)"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 35,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "SC",
+    "branch_name": "Computer Science and Engineering (Cyber Security)",
+    "observed_names": [
+      "Computer Science and Engineering (Cyber Security)"
+    ],
+    "row_count": 141,
+    "college_count": 141,
+    "total_seats": 4706,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "SF",
+    "branch_name": "Safety and Fire Engineering",
+    "observed_names": [
+      "Safety and Fire Engineering"
+    ],
+    "row_count": 3,
+    "college_count": 3,
+    "total_seats": 84,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "TC",
+    "branch_name": "TEXTILE CHEMISTRY",
+    "observed_names": [
+      "TEXTILE CHEMISTRY"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 18,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "TS",
+    "branch_name": "Computer Science and Technology",
+    "observed_names": [
+      "Computer Science and Technology"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 35,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "TX",
+    "branch_name": "TEXTILE TECHNOLOGY",
+    "observed_names": [
+      "TEXTILE TECHNOLOGY"
+    ],
+    "row_count": 9,
+    "college_count": 9,
+    "total_seats": 213,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "XC",
+    "branch_name": "CIVIL ENGINEERING (TAMIL MEDIUM)",
+    "observed_names": [
+      "CIVIL ENGINEERING (TAMIL MEDIUM)"
+    ],
+    "row_count": 11,
+    "college_count": 11,
+    "total_seats": 294,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "XM",
+    "branch_name": "MECHANICAL ENGINEERING (TAMIL MEDIUM)",
+    "observed_names": [
+      "MECHANICAL ENGINEERING (TAMIL MEDIUM)"
+    ],
+    "row_count": 13,
+    "college_count": 13,
+    "total_seats": 358,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  },
+  {
+    "branch_code": "XS",
+    "branch_name": "COMPUTER SCIENCE AND ENGINEERING (TAMIL)",
+    "observed_names": [
+      "COMPUTER SCIENCE AND ENGINEERING (TAMIL)"
+    ],
+    "row_count": 1,
+    "college_count": 1,
+    "total_seats": 35,
+    "is_self_financing": false,
+    "is_architecture": false,
+    "keep": true,
+    "removal_reasons": []
+  }
+]
