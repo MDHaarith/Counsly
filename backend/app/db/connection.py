@@ -1,5 +1,6 @@
 """Database connection management."""
 
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,7 @@ from app.config import settings
 from app.errors import service_unavailable
 
 _pool: AsyncConnectionPool | None = None
+_is_serverless = os.environ.get("VERCEL") == "1"
 
 
 async def open_db_pool() -> None:
@@ -21,8 +23,8 @@ async def open_db_pool() -> None:
     if _pool is None:
         _pool = AsyncConnectionPool(
             settings.database_url,
-            min_size=5,
-            max_size=20,
+            min_size=0 if _is_serverless else 5,
+            max_size=2 if _is_serverless else 20,
             kwargs={"row_factory": dict_row},
             open=False,
         )

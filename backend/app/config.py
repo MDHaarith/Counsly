@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
     database_url: str = ""
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"  # comma-separated
-    trusted_hosts: str = "localhost,127.0.0.1"  # comma-separated
-    frontend_url: str = "http://127.0.0.1:3000"
+    cors_origins: str = ""  # comma-separated, MUST be set via env
+    trusted_hosts: str = ""  # comma-separated, MUST be set via env
+    frontend_url: str = ""  # MUST be set via env
     season_year: int = 2026
     # TNEA runtime config (replaces app_config table reads)
     tnea_phase: int = 0
