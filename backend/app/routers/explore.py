@@ -5,19 +5,19 @@ from fastapi import APIRouter, Depends
 from app.auth.middleware import get_current_user
 from app.db.connection import get_db_connection
 from app.errors import api_error
-from app.models import CollegeDetailResponse, ExploreResponse
+from app.models import CollegeDetailResponse, ExploreEnvelope
 from app.services import explore_service
 
 router = APIRouter()
 
 
-@router.get("", response_model=ExploreResponse)
-async def get_explore(q: str | None = None, district: str | None = None, user: dict = Depends(get_current_user)) -> ExploreResponse:
+@router.get("", response_model=ExploreEnvelope)
+async def get_explore(q: str | None = None, district: str | None = None, user: dict = Depends(get_current_user)) -> ExploreEnvelope:
     async with get_db_connection() as conn:
         # In explore, we don't strictly enforce workspace_id for searching, 
         # but user context is provided by get_current_user dependency.
         payload = await explore_service.search_colleges(conn, q, district)
-    return ExploreResponse(**payload)
+    return ExploreEnvelope(**payload)
 
 
 @router.get("/{college_code}", response_model=CollegeDetailResponse)
