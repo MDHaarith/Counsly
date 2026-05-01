@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ApiClientError, apiClient } from "@/lib/api";
 
 const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
+const API_PROXY_TARGET = (process.env.API_PROXY_TARGET ?? "").trim().replace(/\/$/, "");
 
 function forwardedValue(value: string | null): string | null {
   return value?.split(",")[0].trim() || null;
@@ -18,8 +19,15 @@ export async function getRequestOrigin(): Promise<string> {
   return `${protocol}://${host}`;
 }
 
+async function getServerApiBaseUrl(): Promise<string> {
+  if (API_PROXY_TARGET) {
+    return API_PROXY_TARGET;
+  }
+  return getRequestOrigin();
+}
+
 export async function getServerApi<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const origin = await getRequestOrigin();
+  const baseUrl = await getServerApiBaseUrl();
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
   const requestHeaders = new Headers(init.headers);
@@ -28,9 +36,10 @@ export async function getServerApi<T>(path: string, init: RequestInit = {}): Pro
     requestHeaders.set("cookie", `${SESSION_COOKIE_NAME}=${sessionCookie.value}`);
   }
 
-  return apiClient<T>(`${origin}${path}`, {
+  return apiClient<T>(`${baseUrl}${path}`, {
     ...init,
     headers: requestHeaders,
+    cache: "no-store",
   });
 }
 
