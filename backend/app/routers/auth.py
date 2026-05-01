@@ -41,6 +41,10 @@ def _set_session_cookie(response: Response, token: str) -> None:
     )
 
 
+def _request_is_https(request: Request) -> bool:
+    return request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").split(",")[0].strip() == "https"
+
+
 def _verify_google_id_token(token: str) -> dict:
     """Verify Google identity token and return its claims."""
     return google_id_token.verify_oauth2_token(token, GoogleAuthRequest(), settings.google_client_id)
@@ -59,7 +63,7 @@ async def google_start(request: Request) -> RedirectResponse:
         state,
         max_age=600,
         httponly=True,
-        secure=True,
+        secure=_request_is_https(request),
         samesite="lax",
     )
     return response

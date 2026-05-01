@@ -3,9 +3,11 @@
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+
 export default function LoginPage() {
   function startGoogle() {
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google/start`;
+    window.location.href = `${API_URL}/api/auth/google/start`;
   }
 
   return (

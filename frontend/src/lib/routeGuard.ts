@@ -23,7 +23,7 @@ export function isPassThroughRoute(pathname: string) {
   return STATIC_PATHS.includes(pathname) || STATIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-export function getRouteGuardAction(pathname: string, hasSession: boolean, maintenanceEnabled: boolean): RouteGuardAction {
+export function getRouteGuardAction(pathname: string, hasSession: boolean, maintenanceEnabled: boolean, canInspectSession = true): RouteGuardAction {
   if (isPassThroughRoute(pathname)) {
     return { kind: "next" };
   }
@@ -32,7 +32,7 @@ export function getRouteGuardAction(pathname: string, hasSession: boolean, maint
     return { kind: "rewrite", pathname: "/maintenance" };
   }
 
-  if (isAuthRoute(pathname) && !hasSession) {
+  if (isAuthRoute(pathname) && !hasSession && canInspectSession) {
     return { kind: "redirect", pathname: "/login", next: pathname };
   }
 
