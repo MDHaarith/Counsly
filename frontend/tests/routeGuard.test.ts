@@ -18,10 +18,10 @@ test("redirects unauthenticated auth routes to login", () => {
 
 test("allows authenticated auth routes", () => {
   assert.deepEqual(getRouteGuardAction("/choices", true, false), { kind: "next" });
-  assert.deepEqual(getRouteGuardAction("/login", true, false), {
-    kind: "redirect",
-    pathname: "/dashboard",
-  });
+});
+
+test("keeps login reachable even when a stale session cookie exists", () => {
+  assert.deepEqual(getRouteGuardAction("/login", true, false), { kind: "next" });
 });
 
 test("passes through public and static routes", () => {

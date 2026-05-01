@@ -36,9 +36,5 @@ export function getRouteGuardAction(pathname: string, hasSession: boolean, maint
     return { kind: "redirect", pathname: "/login", next: pathname };
   }
 
-  if (pathname === "/login" && hasSession) {
-    return { kind: "redirect", pathname: "/dashboard" };
-  }
-
   return { kind: "next" };
 }
