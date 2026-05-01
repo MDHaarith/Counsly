@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { cloneProxyResponseHeaders, stripHopByHopHeaders } from "@/lib/proxyHeaders";
 
@@ -39,6 +39,24 @@ async function proxy(request: NextRequest, params: Promise<{ path: string[] }>) 
   });
 
   const responseHeaders = cloneProxyResponseHeaders(upstreamResponse.headers);
+  const location = upstreamResponse.headers.get("location");
+
+  if (location && upstreamResponse.status >= 300 && upstreamResponse.status < 400) {
+    const response = NextResponse.redirect(location, upstreamResponse.status);
+    for (const [name, value] of responseHeaders.entries()) {
+      if (name.toLowerCase() === "location") {
+        continue;
+      }
+      if (name.toLowerCase() === "set-cookie") {
+        continue;
+      }
+      response.headers.set(name, value);
+    }
+    for (const cookie of responseHeaders.getSetCookie()) {
+      response.headers.append("set-cookie", cookie);
+    }
+    return response;
+  }
 
   return new Response(upstreamResponse.body, {
     status: upstreamResponse.status,
