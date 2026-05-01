@@ -4,6 +4,7 @@ import asyncio
 import hmac
 import logging
 from secrets import token_urlsafe
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import httpx
@@ -30,14 +31,31 @@ GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v3/userinfo"
 OAUTH_STATE_COOKIE = "counsly_oauth_state"
 
 
-def _set_session_cookie(response: Response, token: str) -> None:
+def _request_origin(request: Request) -> str:
+    scheme = request.headers.get("x-forwarded-proto", "").split(",")[0].strip() or request.url.scheme
+    host = request.headers.get("x-forwarded-host", "").split(",")[0].strip() or request.headers.get("host", "")
+    if not host:
+        return str(request.base_url).rstrip("/")
+    return f"{scheme}://{host}"
+
+
+def _session_cookie_samesite(request: Request) -> str:
+    if not settings.frontend_url:
+        return "lax"
+    frontend = urlparse(settings.frontend_url)
+    backend = urlparse(_request_origin(request))
+    return "none" if (frontend.scheme, frontend.netloc) != (backend.scheme, backend.netloc) else "lax"
+
+
+def _set_session_cookie(request: Request, response: Response, token: str) -> None:
+    samesite = _session_cookie_samesite(request)
     response.set_cookie(
         settings.session_cookie_name,
         token,
         max_age=settings.session_ttl_seconds,
         httponly=True,
-        secure=settings.frontend_url.startswith("https://"),
-        samesite="lax",
+        secure=samesite == "none" or settings.frontend_url.startswith("https://"),
+        samesite=samesite,
     )
 
 
@@ -164,7 +182,7 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
 
     token = await create_session(str(app_user["id"]))
     response = RedirectResponse(url=f"{settings.frontend_url}/dashboard")
-    _set_session_cookie(response, token)
+    _set_session_cookie(request, response, token)
     response.delete_cookie(OAUTH_STATE_COOKIE)
     return response
 

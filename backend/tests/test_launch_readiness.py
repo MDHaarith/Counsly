@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
 import pytest
 from pydantic import ValidationError
@@ -64,6 +64,56 @@ def test_payment_signature_helpers_reject_invalid_signatures() -> None:
     assert not verify_razorpay_webhook_signature(b"{}", None, "secret")
 
 
+def test_cors_origin_regex_allows_vercel_preview_frontends(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "frontend_url", "https://counsly-frontend.vercel.app")
+    monkeypatch.setattr(settings, "cors_origins", "https://counsly-frontend.vercel.app,https://counsly.in")
+
+    assert settings.cors_origin_regex
+    assert "counsly\\-frontend" in settings.cors_origin_regex
+    assert "vercel\\.app" in settings.cors_origin_regex
+
+
+def test_session_cookie_allows_cross_origin_frontend_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "frontend_url", "https://counsly-frontend.vercel.app")
+
+    app = FastAPI()
+
+    @app.get("/set-session")
+    async def set_session(request: Request, response: Response) -> dict[str, bool]:
+        auth._set_session_cookie(request, response, "token")
+        return {"ok": True}
+
+    client = TestClient(app)
+    response = client.get(
+        "/set-session",
+        headers={
+            "host": "counsly-backend.vercel.app",
+            "x-forwarded-proto": "https",
+            "x-forwarded-host": "counsly-backend.vercel.app",
+        },
+    )
+
+    cookie = response.headers["set-cookie"].lower()
+    assert "samesite=none" in cookie
+    assert "secure" in cookie
+
+
+def test_session_cookie_stays_lax_for_same_origin_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "frontend_url", "http://testserver")
+
+    app = FastAPI()
+
+    @app.get("/set-session")
+    async def set_session(request: Request, response: Response) -> dict[str, bool]:
+        auth._set_session_cookie(request, response, "token")
+        return {"ok": True}
+
+    client = TestClient(app)
+    response = client.get("/set-session")
+
+    assert "samesite=lax" in response.headers["set-cookie"].lower()
+
+
 def _auth_test_client() -> TestClient:
     app = FastAPI()
     app.include_router(auth.router, prefix="/api/auth")
@@ -79,6 +129,22 @@ def test_google_callback_rejects_invalid_state(monkeypatch: pytest.MonkeyPatch) 
     response = client.get("/api/auth/callback?code=code&state=bad")
 
     assert response.status_code == 401
+
+
+def test_google_start_sets_secure_state_cookie_only_on_https(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "google_client_id", "client-id")
+
+    async def fake_google_url(redirect_uri: str, state: str) -> str:
+        return f"https://accounts.google.test/start?redirect_uri={redirect_uri}&state={state}"
+
+    monkeypatch.setattr(auth, "get_google_auth_url", fake_google_url)
+    client = _auth_test_client()
+
+    http_response = client.get("/api/auth/google/start", follow_redirects=False)
+    https_response = client.get("/api/auth/google/start", headers={"x-forwarded-proto": "https"}, follow_redirects=False)
+
+    assert "secure" not in http_response.headers["set-cookie"].lower()
+    assert "secure" in https_response.headers["set-cookie"].lower()
 
 
 def test_google_callback_rejects_invalid_id_token(monkeypatch: pytest.MonkeyPatch) -> None:

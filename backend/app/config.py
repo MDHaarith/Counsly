@@ -1,3 +1,6 @@
+import re
+from urllib.parse import urlparse
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +48,24 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def cors_origin_regex(self) -> str | None:
+        patterns: list[str] = []
+        candidates = [self.frontend_url, *self.cors_origin_list]
+        seen: set[str] = set()
+
+        for origin in candidates:
+            if not origin or origin in seen:
+                continue
+            seen.add(origin)
+            parsed = urlparse(origin)
+            if parsed.scheme != "https" or not parsed.netloc.endswith(".vercel.app"):
+                continue
+            subdomain = parsed.netloc[: -len(".vercel.app")]
+            patterns.append(rf"^{re.escape(parsed.scheme)}://{re.escape(subdomain)}(?:-[a-z0-9-]+)?\.vercel\.app$")
+
+        return "|".join(patterns) if patterns else None
 
     @property
     def trusted_host_list(self) -> list[str]:
