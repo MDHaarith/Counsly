@@ -47,20 +47,22 @@ def _verify_google_id_token(token: str) -> dict:
 
 
 @router.get("/google/start")
-async def google_start(request: Request, response: Response) -> dict[str, str]:
+async def google_start(request: Request) -> RedirectResponse:
     if not settings.google_client_id:
         raise service_unavailable("Google OAuth is not configured", "GOOGLE_OAUTH_NOT_CONFIGURED")
     redirect_uri = str(request.url_for("google_callback"))
     state = token_urlsafe(32)
+    google_url = await get_google_auth_url(redirect_uri, state)
+    response = RedirectResponse(url=google_url)
     response.set_cookie(
         OAUTH_STATE_COOKIE,
         state,
         max_age=600,
         httponly=True,
-        secure=settings.frontend_url.startswith("https://"),
+        secure=True,
         samesite="lax",
     )
-    return {"url": await get_google_auth_url(redirect_uri, state)}
+    return response
 
 
 @router.get("/callback")
