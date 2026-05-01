@@ -1,9 +1,5 @@
-import { cookies } from "next/headers";
-
 import { RecommendationsClient } from "@/components/recommendations/RecommendationsClient";
-import { apiClient } from "@/lib/api";
-
-const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
+import { getServerApi } from "@/lib/serverApi";
 
 interface RecommendationItem {
   college_code: string;
@@ -25,15 +21,11 @@ interface RecommendationsPayload {
 }
 
 export default async function RecommendationsPage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
-
   let initialData: RecommendationsPayload | null = null;
   let error: string | null = null;
 
   try {
-    initialData = await apiClient<RecommendationsPayload>("/api/recommendations", { headers });
+    initialData = await getServerApi<RecommendationsPayload>("/api/recommendations");
   } catch (err) {
     error = err instanceof Error ? err.message : "Could not load recommendations.";
   }

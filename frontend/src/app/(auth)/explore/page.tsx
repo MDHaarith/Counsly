@@ -1,9 +1,5 @@
-import { cookies } from "next/headers";
-
 import { CollegeSearch } from "@/components/explore/CollegeSearch";
-import { apiClient } from "@/lib/api";
-
-const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
+import { getServerApi } from "@/lib/serverApi";
 
 interface CollegeItem {
   college_code: string;
@@ -21,13 +17,9 @@ interface ExplorePayload {
 }
 
 export default async function ExplorePage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
-
   let initialData: ExplorePayload | null = null;
   try {
-    initialData = await apiClient<ExplorePayload>("/api/explore", { headers });
+    initialData = await getServerApi<ExplorePayload>("/api/explore");
   } catch (err) {
     console.error("Failed to fetch initial explore data", err);
   }

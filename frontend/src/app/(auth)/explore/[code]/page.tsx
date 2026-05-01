@@ -1,11 +1,7 @@
-import { cookies } from "next/headers";
-
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CollegeDetailClient } from "@/components/explore/CollegeDetailClient";
-import { apiClient } from "@/lib/api";
-
-const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
+import { getServerApi } from "@/lib/serverApi";
 
 interface BranchInsight {
   branch_code: string;
@@ -29,15 +25,11 @@ interface CollegeDetail {
 
 export default async function CollegeDetailPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
-
   let detail: CollegeDetail | null = null;
   let error: string | null = null;
 
   try {
-    detail = await apiClient<CollegeDetail>(`/api/explore/${code}`, { headers });
+    detail = await getServerApi<CollegeDetail>(`/api/explore/${code}`);
   } catch (err) {
     error = err instanceof Error ? err.message : "Could not load college.";
   }

@@ -46,6 +46,11 @@ def _session_cookie_samesite(request: Request) -> str:
     return "none" if (frontend.scheme, frontend.netloc) != (backend.scheme, backend.netloc) else "lax"
 
 
+def _public_callback_url(request: Request) -> str:
+    callback_path = request.url_for("google_callback").path
+    return f"{_request_origin(request)}{callback_path}"
+
+
 def _set_session_cookie(request: Request, response: Response, token: str) -> None:
     samesite = _session_cookie_samesite(request)
     response.set_cookie(
@@ -81,7 +86,7 @@ def _profile_from_verified_claims(verified_claims: dict) -> dict[str, object]:
 async def google_start(request: Request) -> RedirectResponse:
     if not settings.google_client_id:
         raise service_unavailable("Google OAuth is not configured", "GOOGLE_OAUTH_NOT_CONFIGURED")
-    redirect_uri = str(request.url_for("google_callback"))
+    redirect_uri = _public_callback_url(request)
     state = token_urlsafe(32)
     google_url = await get_google_auth_url(redirect_uri, state)
     response = RedirectResponse(url=google_url)
@@ -105,7 +110,7 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
         logger.warning("oauth_state_invalid path=%s has_cookie=%s", request.url.path, bool(expected_state))
         raise api_error(401, "Google OAuth state verification failed", "GOOGLE_OAUTH_STATE_INVALID")
 
-    redirect_uri = str(request.url_for("google_callback"))
+    redirect_uri = _public_callback_url(request)
     async with httpx.AsyncClient(timeout=15) as client:
         token_res = await client.post(
             GOOGLE_TOKEN_URL,

@@ -14,6 +14,12 @@ from app.routers.config import _round_dates
 from app.routers.payments import verify_razorpay_payment_signature, verify_razorpay_webhook_signature
 
 
+def test_backend_app_imports() -> None:
+    from app.main import app
+
+    assert isinstance(app, FastAPI)
+
+
 def test_queries_has_no_duplicate_launch_functions() -> None:
     source = Path("app/db/queries.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
@@ -157,8 +163,10 @@ def test_google_callback_rejects_invalid_state(monkeypatch: pytest.MonkeyPatch) 
 
 def test_google_start_sets_secure_state_cookie_only_on_https(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(auth.settings, "google_client_id", "client-id")
+    captured_uris: list[str] = []
 
     async def fake_google_url(redirect_uri: str, state: str) -> str:
+        captured_uris.append(redirect_uri)
         return f"https://accounts.google.test/start?redirect_uri={redirect_uri}&state={state}"
 
     monkeypatch.setattr(auth, "get_google_auth_url", fake_google_url)
@@ -169,6 +177,35 @@ def test_google_start_sets_secure_state_cookie_only_on_https(monkeypatch: pytest
 
     assert "secure" not in http_response.headers["set-cookie"].lower()
     assert "secure" in https_response.headers["set-cookie"].lower()
+    assert captured_uris == [
+        "http://testserver/api/auth/callback",
+        "https://testserver/api/auth/callback",
+    ]
+
+
+def test_google_start_uses_forwarded_public_origin_for_redirect_uri(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "google_client_id", "client-id")
+    captured: dict[str, str] = {}
+
+    async def fake_google_url(redirect_uri: str, state: str) -> str:
+        captured["redirect_uri"] = redirect_uri
+        return f"https://accounts.google.test/start?redirect_uri={redirect_uri}&state={state}"
+
+    monkeypatch.setattr(auth, "get_google_auth_url", fake_google_url)
+    client = _auth_test_client()
+
+    response = client.get(
+        "/api/auth/google/start",
+        headers={
+            "host": "backend.internal",
+            "x-forwarded-proto": "https",
+            "x-forwarded-host": "counsly.in",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 307
+    assert captured["redirect_uri"] == "https://counsly.in/api/auth/callback"
 
 
 def test_google_callback_uses_verified_id_token_claims_without_userinfo(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -183,6 +220,8 @@ def test_google_callback_uses_verified_id_token_claims_without_userinfo(monkeypa
         def json(self) -> dict[str, str]:
             return {"id_token": "good-id-token"}
 
+    token_request: dict[str, object] = {}
+
     class FakeAsyncClient:
         def __init__(self, *args: object, **kwargs: object) -> None:
             pass
@@ -194,6 +233,7 @@ def test_google_callback_uses_verified_id_token_claims_without_userinfo(monkeypa
             return None
 
         async def post(self, *args: object, **kwargs: object) -> FakeResponse:
+            token_request.update(kwargs)
             return FakeResponse()
 
         async def get(self, *args: object, **kwargs: object) -> FakeResponse:
@@ -255,13 +295,22 @@ def test_google_callback_uses_verified_id_token_claims_without_userinfo(monkeypa
     client = _auth_test_client()
     client.cookies.set(auth.OAUTH_STATE_COOKIE, "expected")
 
-    response = client.get("/api/auth/callback?code=code&state=expected", headers={"x-forwarded-proto": "https"}, follow_redirects=False)
+    response = client.get(
+        "/api/auth/callback?code=code&state=expected",
+        headers={
+            "x-forwarded-proto": "https",
+            "x-forwarded-host": "counsly.in",
+            "host": "backend.internal",
+        },
+        follow_redirects=False,
+    )
 
     assert response.status_code == 307
     assert response.headers["location"] == "https://counsly-frontend.vercel.app/dashboard"
     cookie = response.headers["set-cookie"].lower()
     assert "counsly_session=session-token" in cookie
     assert "samesite=none" in cookie
+    assert token_request["data"]["redirect_uri"] == "https://counsly.in/api/auth/callback"
 
 
 def test_google_callback_rejects_invalid_id_token(monkeypatch: pytest.MonkeyPatch) -> None:

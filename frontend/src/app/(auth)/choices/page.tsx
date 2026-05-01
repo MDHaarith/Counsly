@@ -1,9 +1,5 @@
-import { cookies } from "next/headers";
-
 import { ChoicesClient } from "@/components/choices/ChoicesClient";
-import { apiClient } from "@/lib/api";
-
-const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
+import { getServerApi } from "@/lib/serverApi";
 
 interface ChoiceItem {
   id: string;
@@ -25,15 +21,11 @@ interface ChoicesPayload {
 }
 
 export default async function ChoicesPage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
-
   let initialData: ChoicesPayload | null = null;
   let error: string | null = null;
 
   try {
-    initialData = await apiClient<ChoicesPayload>("/api/choices", { headers });
+    initialData = await getServerApi<ChoicesPayload>("/api/choices");
   } catch (err) {
     error = err instanceof Error ? err.message : "Could not load choices.";
   }

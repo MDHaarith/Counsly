@@ -3,17 +3,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getRouteGuardAction } from "@/lib/routeGuard";
 
 const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
-function canInspectSessionCookie(request: NextRequest) {
-  if (!API_URL) return true;
-
-  try {
-    return new URL(API_URL).origin === request.nextUrl.origin;
-  } catch {
-    return false;
-  }
-}
 
 export function proxy(request: NextRequest) {
   const maintenanceEnabled = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === "true";
@@ -22,7 +11,6 @@ export function proxy(request: NextRequest) {
     pathname,
     Boolean(request.cookies.get(SESSION_COOKIE_NAME)),
     maintenanceEnabled,
-    canInspectSessionCookie(request),
   );
 
   if (action.kind === "rewrite") {

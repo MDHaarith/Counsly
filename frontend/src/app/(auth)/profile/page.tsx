@@ -1,11 +1,7 @@
-import { cookies } from "next/headers";
-
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { ProfileClient } from "@/components/profile/ProfileClient";
-import { apiClient } from "@/lib/api";
-
-const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
+import { getServerApi } from "@/lib/serverApi";
 
 interface ProfilePayload {
   full_name: string | null;
@@ -22,15 +18,11 @@ interface ProfilePayload {
 }
 
 export default async function ProfilePage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
-
   let profile: ProfilePayload | null = null;
   let error: string | null = null;
 
   try {
-    profile = await apiClient<ProfilePayload>("/api/profile", { headers });
+    profile = await getServerApi<ProfilePayload>("/api/profile");
   } catch (err) {
     error = err instanceof Error ? err.message : "Could not load profile.";
   }

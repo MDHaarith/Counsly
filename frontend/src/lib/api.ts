@@ -1,13 +1,12 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
 interface ApiOptions extends RequestInit {
   raw?: boolean;
 }
 
 export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { raw, ...fetchOptions } = options;
+  const requestUrl = path.startsWith("http://") || path.startsWith("https://") ? path : path;
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(requestUrl, {
     ...fetchOptions,
     // Note: credentials: "include" works for client-side fetches.
     // For server-side fetches, the caller must manually pass the Cookie header in fetchOptions.headers.

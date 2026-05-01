@@ -16,12 +16,12 @@ test("redirects unauthenticated auth routes to login", () => {
   });
 });
 
-test("allows auth routes when the frontend cannot inspect the backend session cookie", () => {
-  assert.deepEqual(getRouteGuardAction("/dashboard", false, false, false), { kind: "next" });
-});
-
 test("allows authenticated auth routes", () => {
   assert.deepEqual(getRouteGuardAction("/choices", true, false), { kind: "next" });
+  assert.deepEqual(getRouteGuardAction("/login", true, false), {
+    kind: "redirect",
+    pathname: "/dashboard",
+  });
 });
 
 test("passes through public and static routes", () => {

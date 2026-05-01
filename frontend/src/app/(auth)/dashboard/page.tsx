@@ -1,12 +1,9 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { getConfigStatus, getProfile } from "@/lib/api";
-
-const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
+import { getServerApi } from "@/lib/serverApi";
 
 interface StatusPayload {
   tnea_phase: number;
@@ -22,18 +19,14 @@ interface ProfilePayload {
 }
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
-
   let status: StatusPayload | null = null;
   let profile: ProfilePayload | null = null;
   let error: string | null = null;
 
   try {
     [status, profile] = await Promise.all([
-      getConfigStatus<StatusPayload>(headers),
-      getProfile<ProfilePayload>(headers),
+      getServerApi<StatusPayload>("/api/config/status"),
+      getServerApi<ProfilePayload>("/api/profile"),
     ]);
   } catch (err) {
     error = err instanceof Error ? err.message : "Could not load dashboard.";
