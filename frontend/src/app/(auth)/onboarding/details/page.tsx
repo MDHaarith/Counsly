@@ -43,7 +43,7 @@ export default function DetailsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-serif text-[30px] font-medium leading-tight">Your counselling details</h1>
+        <h1 className="font-serif text-3xl font-medium leading-tight">Your counselling details</h1>
         <p className="mt-2 text-sm leading-relaxed text-olive-gray">Community and district affect cutoffs, recommendations, and nearby help later.</p>
       </div>
       <div className="grid gap-3">

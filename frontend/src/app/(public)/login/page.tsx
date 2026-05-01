@@ -7,7 +7,7 @@ export default function LoginPage() {
       <div className="space-y-6">
         <div>
           <p className="text-sm font-medium text-olive-gray">Counsly account</p>
-          <h1 className="mt-2 font-serif text-[34px] font-medium leading-tight">Continue with Google</h1>
+          <h1 className="mt-2 font-serif text-4xl font-medium leading-tight">Continue with Google</h1>
           <p className="mt-3 text-sm leading-relaxed text-olive-gray">
             Your workspace keeps marks, choices, and payment access together for this counselling season.
           </p>

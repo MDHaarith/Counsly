@@ -41,7 +41,7 @@ export default function MarksPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-serif text-[30px] font-medium leading-tight">Enter your marks</h1>
+        <h1 className="font-serif text-3xl font-medium leading-tight">Enter your marks</h1>
         <p className="mt-2 text-sm leading-relaxed text-olive-gray">Use your TNEA cutoff subjects. Counsly uses range-based guidance, not exact rank prediction.</p>
       </div>
       <div className="grid gap-3">

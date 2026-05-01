@@ -35,7 +35,7 @@ export default async function ChoicesPage() {
     <div className="space-y-4 p-5">
       <div>
         <p className="text-sm font-medium text-olive-gray">Choice filing</p>
-        <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">Your ordered list</h1>
+        <h1 className="mt-1 font-serif text-3xl font-medium leading-tight">Your ordered list</h1>
         {initialData && (
           <p className="mt-2 text-sm text-olive-gray">
             {initialData.items.length}/{initialData.limit} active rows · tap a priority number to move.
