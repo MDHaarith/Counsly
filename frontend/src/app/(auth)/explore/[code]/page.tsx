@@ -1,13 +1,11 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { cookies } from "next/headers";
 
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { apiClient, postJson } from "@/lib/api";
+import { CollegeDetailClient } from "@/components/explore/CollegeDetailClient";
+import { apiClient } from "@/lib/api";
+
+const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
 
 interface BranchInsight {
   branch_code: string;
@@ -29,33 +27,35 @@ interface CollegeDetail {
   branches: BranchInsight[];
 }
 
-export default function CollegeDetailPage() {
-  const params = useParams<{ code: string }>();
-  const [detail, setDetail] = useState<CollegeDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState<string | null>(null);
+export default async function CollegeDetailPage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
 
-  useEffect(() => {
-    apiClient<CollegeDetail>(`/api/explore/${params.code}`).then(setDetail).catch((err) => setError(err instanceof Error ? err.message : "Could not load college."));
-  }, [params.code]);
+  let detail: CollegeDetail | null = null;
+  let error: string | null = null;
 
-  async function add(branch: BranchInsight) {
-    setAdding(branch.branch_code);
-    try {
-      await postJson("/api/choices", { college_code: params.code, branch_code: branch.branch_code });
-    } finally {
-      setAdding(null);
-    }
+  try {
+    detail = await apiClient<CollegeDetail>(`/api/explore/${code}`, { headers });
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Could not load college.";
   }
 
   return (
     <div className="space-y-4 p-5">
-      {error && <Card><p className="text-sm text-error-crimson">{error}</p></Card>}
-      {!detail && !error && <div className="grid gap-3"><Skeleton className="h-20" /><Skeleton className="h-28" /><Skeleton className="h-24" /></div>}
+      {error && (
+        <Card>
+          <p className="text-sm text-error-crimson">{error}</p>
+        </Card>
+      )}
+
       {detail && (
         <>
           <div>
-            <p className="text-sm font-medium text-olive-gray">{detail.college_code} · {detail.district ?? "District pending"}</p>
+            <p className="text-sm font-medium text-olive-gray">
+              {detail.college_code} · {detail.district ?? "District pending"}
+            </p>
             <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">{detail.college_name}</h1>
           </div>
           <Card>
@@ -67,20 +67,8 @@ export default function CollegeDetailPage() {
             </div>
             {detail.address && <p className="mt-3 text-sm leading-relaxed text-olive-gray">{detail.address}</p>}
           </Card>
-          <div className="space-y-3">
-            <h2 className="font-serif text-xl font-medium">Branches</h2>
-            {detail.branches.map((branch) => (
-              <Card key={branch.branch_code}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-serif text-lg font-medium">{branch.branch_name}</h3>
-                    <p className="mt-1 font-mono text-sm text-stone-gray">{branch.branch_code} · {branch.total_seats ?? "-"} seats</p>
-                  </div>
-                  <Button variant="secondary" className="w-auto" onClick={() => add(branch)} disabled={adding === branch.branch_code}>{adding === branch.branch_code ? "Adding" : "Add"}</Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+
+          <CollegeDetailClient branches={detail.branches} collegeCode={code} />
         </>
       )}
     </div>

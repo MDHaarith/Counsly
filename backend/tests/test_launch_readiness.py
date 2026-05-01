@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import settings
-from app.db.queries import compute_safety
+from app.services.recommendation_service import compute_safety
 from app.models import MarksRequest
 from app.routers import auth
 from app.routers.config import _round_dates

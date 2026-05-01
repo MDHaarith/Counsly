@@ -167,18 +167,8 @@ async def save_details(conn: AsyncConnection, workspace_id: str, payload: dict[s
     return {**state, "cutoff_mark": profile["cutoff_mark"] if profile else None}
 
 
-def calculate_aggregate_mark(maths: int, physics: int, chemistry: int) -> Decimal:
-    return Decimal(maths) + (Decimal(physics) / Decimal(2)) + (Decimal(chemistry) / Decimal(2))
-
-
-async def fetch_rank_band(
-    conn: AsyncConnection,
-    maths: int,
-    physics: int,
-    chemistry: int,
-    community: str | None = None,
-) -> dict[str, Any] | None:
-    aggregate_mark = calculate_aggregate_mark(maths, physics, chemistry)
+async def fetch_rank_band(conn: AsyncConnection, aggregate_mark: Decimal) -> dict[str, Any] | None:
+    """Fetch rank band for a specific aggregate mark."""
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
@@ -189,20 +179,7 @@ async def fetch_rank_band(
             """,
             (aggregate_mark,),
         )
-        historical = await cur.fetchone()
-        if not historical:
-            return None
-        return historical
-
-
-def compute_safety(student_rank: int | None, cutoff_rank: int | None) -> str | None:
-    if student_rank is None or cutoff_rank is None:
-        return None
-    if student_rank <= cutoff_rank - 500:
-        return "safe"
-    if student_rank <= cutoff_rank + 200:
-        return "moderate"
-    return "ambitious"
+        return await cur.fetchone()
 
 
 async def workspace_is_eligible(conn: AsyncConnection, workspace_id: str) -> bool:

@@ -1,13 +1,12 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { cookies } from "next/headers";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { apiClient } from "@/lib/api";
+import { getConfigStatus, getProfile } from "@/lib/api";
+
+const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
 
 interface StatusPayload {
   tnea_phase: number;
@@ -22,19 +21,23 @@ interface ProfilePayload {
   paid: boolean;
 }
 
-export default function DashboardPage() {
-  const [status, setStatus] = useState<StatusPayload | null>(null);
-  const [profile, setProfile] = useState<ProfilePayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
 
-  useEffect(() => {
-    Promise.all([apiClient<StatusPayload>("/api/config/status"), apiClient<ProfilePayload>("/api/profile")])
-      .then(([statusData, profileData]) => {
-        setStatus(statusData);
-        setProfile(profileData);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Could not load dashboard."));
-  }, []);
+  let status: StatusPayload | null = null;
+  let profile: ProfilePayload | null = null;
+  let error: string | null = null;
+
+  try {
+    [status, profile] = await Promise.all([
+      getConfigStatus<StatusPayload>(headers),
+      getProfile<ProfilePayload>(headers),
+    ]);
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Could not load dashboard.";
+  }
 
   const unverified = status ? Object.entries(status.data_freshness).filter(([, value]) => value !== "verified") : [];
 
@@ -45,20 +48,35 @@ export default function DashboardPage() {
         <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">{profile?.full_name ? `Hi, ${profile.full_name}` : "Your counselling dashboard"}</h1>
       </div>
 
-      {error && <Card><p className="text-sm text-error-crimson">{error}</p><Link href="/login"><Button className="mt-4">Login again</Button></Link></Card>}
+      {error && (
+        <Card>
+          <p className="text-sm text-error-crimson">{error}</p>
+          <Link href="/login">
+            <Button className="mt-4">Login again</Button>
+          </Link>
+        </Card>
+      )}
 
-      {!status && !profile && !error && <div className="grid gap-3"><Skeleton className="h-32" /><Skeleton className="h-24" /></div>}
-
-      {profile && <Card>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-serif text-xl font-medium">Next best action</h2>
-            <p className="mt-1 text-sm leading-relaxed text-olive-gray">{profile?.cutoff_mark ? "Review colleges matched to your current rank context." : "Complete onboarding so recommendations can use your marks and community."}</p>
+      {profile && (
+        <Card>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-serif text-xl font-medium">Next best action</h2>
+              <p className="mt-1 text-sm leading-relaxed text-olive-gray">
+                {profile.cutoff_mark
+                  ? "Review colleges matched to your current rank context."
+                  : "Complete onboarding so recommendations can use your marks and community."}
+              </p>
+            </div>
+            {profile.paid ? <Badge variant="safe">Paid</Badge> : <Badge>Free</Badge>}
           </div>
-          {profile?.paid ? <Badge variant="safe">Paid</Badge> : <Badge>Free</Badge>}
-        </div>
-        <Link href={profile?.cutoff_mark ? "/recommendations" : "/onboarding/marks"}><Button className="mt-4">{profile?.cutoff_mark ? "View recommendations" : "Continue setup"}</Button></Link>
-      </Card>}
+          <Link href={profile.cutoff_mark ? "/recommendations" : "/onboarding/marks"}>
+            <Button className="mt-4">
+              {profile.cutoff_mark ? "View recommendations" : "Continue setup"}
+            </Button>
+          </Link>
+        </Card>
+      )}
 
       {status && status.round_dates.length > 0 && (
         <Card>
@@ -81,15 +99,33 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-3">
-        <Link href="/choices"><Card><h3 className="font-serif text-lg font-medium">Choice list</h3><p className="mt-1 text-sm text-olive-gray">Add colleges, reorder priorities, and keep notes.</p></Card></Link>
-        <Link href="/explore"><Card><h3 className="font-serif text-lg font-medium">Explore colleges</h3><p className="mt-1 text-sm text-olive-gray">Search the verified college master.</p></Card></Link>
+        <Link href="/choices">
+          <Card>
+            <h3 className="font-serif text-lg font-medium">Choice list</h3>
+            <p className="mt-1 text-sm text-olive-gray">Add colleges, reorder priorities, and keep notes.</p>
+          </Card>
+        </Link>
+        <Link href="/explore">
+          <Card>
+            <h3 className="font-serif text-lg font-medium">Explore colleges</h3>
+            <p className="mt-1 text-sm text-olive-gray">Search the verified college master.</p>
+          </Card>
+        </Link>
       </div>
 
       {unverified.length > 0 && (
         <Card>
           <h2 className="font-serif text-lg font-medium">Data readiness</h2>
-          <p className="mt-1 text-sm leading-relaxed text-olive-gray">Some datasets are not verified yet. Counsly will show data-not-ready states instead of decision claims.</p>
-          <div className="mt-3 flex flex-wrap gap-2">{unverified.slice(0, 5).map(([key, value]) => <Badge key={key}>{key}: {value}</Badge>)}</div>
+          <p className="mt-1 text-sm leading-relaxed text-olive-gray">
+            Some datasets are not verified yet. Counsly will show data-not-ready states instead of decision claims.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {unverified.slice(0, 5).map(([key, value]) => (
+              <Badge key={key}>
+                {key}: {value}
+              </Badge>
+            ))}
+          </div>
         </Card>
       )}
     </div>

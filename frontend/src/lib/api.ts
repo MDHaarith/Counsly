@@ -9,6 +9,8 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...fetchOptions,
+    // Note: credentials: "include" works for client-side fetches.
+    // For server-side fetches, the caller must manually pass the Cookie header in fetchOptions.headers.
     credentials: "include",
     headers: {
       ...(raw ? {} : { "Content-Type": "application/json" }),
@@ -17,21 +19,31 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: "Request failed", code: "UNKNOWN" }));
-    throw new Error(body.error ?? `API error ${res.status}`);
+    let errorMessage = `API error ${res.status}`;
+    try {
+      const body = await res.json();
+      errorMessage = body.error ?? errorMessage;
+    } catch {
+      // ignore json parse error
+    }
+    throw new Error(errorMessage);
   }
 
   return res.json() as Promise<T>;
 }
 
-export function getConfigStatus<T>() {
-  return apiClient<T>("/api/config/status");
+export function getConfigStatus<T>(headers?: HeadersInit) {
+  return apiClient<T>("/api/config/status", { headers });
 }
 
-export function getSession<T>() {
-  return apiClient<T>("/api/auth/session");
+export function getSession<T>(headers?: HeadersInit) {
+  return apiClient<T>("/api/auth/session", { headers });
 }
 
-export function postJson<T>(path: string, body: unknown) {
-  return apiClient<T>(path, { method: "POST", body: JSON.stringify(body) });
+export function getProfile<T>(headers?: HeadersInit) {
+  return apiClient<T>("/api/profile", { headers });
+}
+
+export function postJson<T>(path: string, body: unknown, headers?: HeadersInit) {
+  return apiClient<T>(path, { method: "POST", body: JSON.stringify(body), headers });
 }

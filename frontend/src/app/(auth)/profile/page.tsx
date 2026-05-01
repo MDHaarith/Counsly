@@ -1,13 +1,11 @@
-"use client";
-
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { cookies } from "next/headers";
 
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { ProfileClient } from "@/components/profile/ProfileClient";
 import { apiClient } from "@/lib/api";
+
+const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
 
 interface ProfilePayload {
   full_name: string | null;
@@ -23,17 +21,18 @@ interface ProfilePayload {
   paid: boolean;
 }
 
-export default function ProfilePage() {
-  const [profile, setProfile] = useState<ProfilePayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default async function ProfilePage() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+  const headers: HeadersInit = sessionCookie ? { Cookie: `${SESSION_COOKIE_NAME}=${sessionCookie.value}` } : {};
 
-  useEffect(() => {
-    apiClient<ProfilePayload>("/api/profile").then(setProfile).catch((err) => setError(err instanceof Error ? err.message : "Could not load profile."));
-  }, []);
+  let profile: ProfilePayload | null = null;
+  let error: string | null = null;
 
-  async function logout() {
-    await apiClient("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+  try {
+    profile = await apiClient<ProfilePayload>("/api/profile", { headers });
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Could not load profile.";
   }
 
   return (
@@ -42,15 +41,22 @@ export default function ProfilePage() {
         <p className="text-sm font-medium text-olive-gray">Profile</p>
         <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">Student details</h1>
       </div>
-      {error && <Card><p className="text-sm text-error-crimson">{error}</p></Card>}
-      {!profile && !error && <div className="grid gap-3"><Skeleton className="h-28" /><Skeleton className="h-24" /></div>}
+
+      {error && (
+        <Card>
+          <p className="text-sm text-error-crimson">{error}</p>
+        </Card>
+      )}
+
       {profile && (
         <>
           <Card variant="featured">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="font-serif text-xl font-medium">{profile.full_name ?? "Name not added"}</h2>
-                <p className="mt-1 text-sm text-olive-gray">{profile.community_quota ?? "Community pending"} · {profile.home_district ?? "District pending"}</p>
+                <p className="mt-1 text-sm text-olive-gray">
+                  {profile.community_quota ?? "Community pending"} · {profile.home_district ?? "District pending"}
+                </p>
               </div>
               {profile.paid ? <Badge variant="safe">Full Access</Badge> : <Badge>Free</Badge>}
             </div>
@@ -58,14 +64,22 @@ export default function ProfilePage() {
           <Card>
             <h2 className="font-serif text-lg font-medium">Marks</h2>
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <p>Maths <span className="font-mono">{profile.maths_mark ?? "-"}</span></p>
-              <p>Physics <span className="font-mono">{profile.physics_mark ?? "-"}</span></p>
-              <p>Chemistry <span className="font-mono">{profile.chemistry_mark ?? "-"}</span></p>
-              <p>Cutoff <span className="font-mono">{profile.cutoff_mark ?? "-"}</span></p>
+              <p>
+                Maths <span className="font-mono">{profile.maths_mark ?? "-"}</span>
+              </p>
+              <p>
+                Physics <span className="font-mono">{profile.physics_mark ?? "-"}</span>
+              </p>
+              <p>
+                Chemistry <span className="font-mono">{profile.chemistry_mark ?? "-"}</span>
+              </p>
+              <p>
+                Cutoff <span className="font-mono">{profile.cutoff_mark ?? "-"}</span>
+              </p>
             </div>
           </Card>
-          <Button variant="secondary" onClick={logout}>Log out</Button>
-          {!profile.paid && <Link href="/subscribe?from=profile"><Button>Unlock Full Access</Button></Link>}
+
+          <ProfileClient isPaid={profile.paid} />
         </>
       )}
     </div>
