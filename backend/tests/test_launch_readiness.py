@@ -147,6 +147,99 @@ def test_google_start_sets_secure_state_cookie_only_on_https(monkeypatch: pytest
     assert "secure" in https_response.headers["set-cookie"].lower()
 
 
+def test_google_callback_uses_verified_id_token_claims_without_userinfo(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "google_client_id", "client-id")
+    monkeypatch.setattr(auth.settings, "google_client_secret", "client-secret")
+    monkeypatch.setattr(auth.settings, "frontend_url", "https://counsly-frontend.vercel.app")
+    monkeypatch.setattr(auth.settings, "season_year", 2026)
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self) -> dict[str, str]:
+            return {"id_token": "good-id-token"}
+
+    class FakeAsyncClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        async def __aenter__(self) -> "FakeAsyncClient":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def post(self, *args: object, **kwargs: object) -> FakeResponse:
+            return FakeResponse()
+
+        async def get(self, *args: object, **kwargs: object) -> FakeResponse:
+            raise AssertionError("userinfo should not be called when verified id_token claims are sufficient")
+
+    class FakeCursor:
+        def __init__(self) -> None:
+            self.fetchone_calls = 0
+
+        async def __aenter__(self) -> "FakeCursor":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def execute(self, *args: object, **kwargs: object) -> None:
+            return None
+
+        async def fetchone(self) -> dict[str, str]:
+            self.fetchone_calls += 1
+            if self.fetchone_calls == 1:
+                return {"id": "identity-id", "auth_user_id": "auth-user-id"}
+            if self.fetchone_calls == 2:
+                return {"id": "550e8400-e29b-41d4-a716-446655440000"}
+            raise AssertionError("unexpected fetchone call")
+
+    class FakeConnection:
+        def cursor(self, *args: object, **kwargs: object) -> FakeCursor:
+            return FakeCursor()
+
+        async def commit(self) -> None:
+            return None
+
+    class FakeConnectionContext:
+        async def __aenter__(self) -> FakeConnection:
+            return FakeConnection()
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+    def verified_claims(_token: str) -> dict[str, object]:
+        return {
+            "sub": "google-sub",
+            "email": "student@example.com",
+            "email_verified": True,
+            "name": "Student User",
+            "picture": "https://example.com/avatar.png",
+        }
+
+    async def fake_create_session(user_id: str) -> str:
+        assert user_id == "550e8400-e29b-41d4-a716-446655440000"
+        return "session-token"
+
+    monkeypatch.setattr(auth.httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(auth, "_verify_google_id_token", verified_claims)
+    monkeypatch.setattr(auth, "get_db_connection", lambda: FakeConnectionContext())
+    monkeypatch.setattr(auth, "create_session", fake_create_session)
+
+    client = _auth_test_client()
+    client.cookies.set(auth.OAUTH_STATE_COOKIE, "expected")
+
+    response = client.get("/api/auth/callback?code=code&state=expected", headers={"x-forwarded-proto": "https"}, follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://counsly-frontend.vercel.app/dashboard"
+    cookie = response.headers["set-cookie"].lower()
+    assert "counsly_session=session-token" in cookie
+    assert "samesite=none" in cookie
+
+
 def test_google_callback_rejects_invalid_id_token(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(auth.settings, "google_client_id", "client-id")
     monkeypatch.setattr(auth.settings, "google_client_secret", "client-secret")

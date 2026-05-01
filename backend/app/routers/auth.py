@@ -27,7 +27,6 @@ router = APIRouter()
 logger = logging.getLogger("counsly.security.auth")
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-GOOGLE_USERINFO_URL = "https://oauth2.googleapis.com/oauth2/v3/userinfo"
 OAUTH_STATE_COOKIE = "counsly_oauth_state"
 
 
@@ -66,6 +65,16 @@ def _request_is_https(request: Request) -> bool:
 def _verify_google_id_token(token: str) -> dict:
     """Verify Google identity token and return its claims."""
     return google_id_token.verify_oauth2_token(token, GoogleAuthRequest(), settings.google_client_id)
+
+
+def _profile_from_verified_claims(verified_claims: dict) -> dict[str, object]:
+    return {
+        "sub": verified_claims.get("sub"),
+        "email": verified_claims.get("email"),
+        "email_verified": bool(verified_claims.get("email_verified")),
+        "name": verified_claims.get("name"),
+        "picture": verified_claims.get("picture"),
+    }
 
 
 @router.get("/google/start")
@@ -112,11 +121,7 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
             logger.warning("oauth_token_exchange_failed status=%s", token_res.status_code)
             raise api_error(401, "Google OAuth token exchange failed", "GOOGLE_TOKEN_EXCHANGE_FAILED")
         token_payload = token_res.json()
-        access_token = token_payload.get("access_token")
         identity_token = token_payload.get("id_token")
-        if not access_token:
-            logger.warning("oauth_access_token_missing")
-            raise api_error(401, "Google access token missing", "GOOGLE_ACCESS_TOKEN_MISSING")
         if not identity_token:
             logger.warning("oauth_id_token_missing")
             raise api_error(401, "Google identity token missing", "GOOGLE_ID_TOKEN_MISSING")
@@ -125,18 +130,11 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
         except ValueError as exc:
             logger.warning("oauth_id_token_invalid reason=%s", exc.__class__.__name__)
             raise api_error(401, "Google identity token verification failed", "GOOGLE_ID_TOKEN_INVALID") from exc
-        user_res = await client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
-        if user_res.status_code >= 400:
-            logger.warning("oauth_profile_lookup_failed status=%s", user_res.status_code)
-            raise api_error(401, "Google profile lookup failed", "GOOGLE_PROFILE_FAILED")
-        profile = user_res.json()
+        profile = _profile_from_verified_claims(verified_claims)
 
     if not profile.get("sub") or not profile.get("email"):
         logger.warning("oauth_profile_incomplete has_sub=%s has_email=%s", bool(profile.get("sub")), bool(profile.get("email")))
         raise api_error(401, "Google profile is missing required identity fields", "GOOGLE_PROFILE_INCOMPLETE")
-    if verified_claims.get("sub") != profile.get("sub") or verified_claims.get("email") != profile.get("email"):
-        logger.warning("oauth_identity_mismatch")
-        raise api_error(401, "Google identity token does not match profile", "GOOGLE_IDENTITY_MISMATCH")
     if not verified_claims.get("email_verified"):
         logger.warning("oauth_email_not_verified")
         raise api_error(401, "Google email is not verified", "GOOGLE_EMAIL_NOT_VERIFIED")
