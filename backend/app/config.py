@@ -50,6 +50,10 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @property
+    def effective_session_cookie_name(self) -> str:
+        return self.session_cookie_name.strip() or "counsly_session"
+
+    @property
     def cors_origin_regex(self) -> str | None:
         patterns: list[str] = []
         candidates = [self.frontend_url, *self.cors_origin_list]

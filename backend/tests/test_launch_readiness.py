@@ -114,6 +114,30 @@ def test_session_cookie_stays_lax_for_same_origin_requests(monkeypatch: pytest.M
     assert "samesite=lax" in response.headers["set-cookie"].lower()
 
 
+def test_session_cookie_falls_back_when_cookie_name_env_is_blank(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(auth.settings, "frontend_url", "https://counsly-frontend.vercel.app")
+    monkeypatch.setattr(auth.settings, "session_cookie_name", "   ")
+
+    app = FastAPI()
+
+    @app.get("/set-session")
+    async def set_session(request: Request, response: Response) -> dict[str, bool]:
+        auth._set_session_cookie(request, response, "token")
+        return {"ok": True}
+
+    client = TestClient(app)
+    response = client.get(
+        "/set-session",
+        headers={
+            "host": "counsly-backend.vercel.app",
+            "x-forwarded-proto": "https",
+            "x-forwarded-host": "counsly-backend.vercel.app",
+        },
+    )
+
+    assert "counsly_session=token" in response.headers["set-cookie"].lower()
+
+
 def _auth_test_client() -> TestClient:
     app = FastAPI()
     app.include_router(auth.router, prefix="/api/auth")

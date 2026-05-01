@@ -49,7 +49,7 @@ def _session_cookie_samesite(request: Request) -> str:
 def _set_session_cookie(request: Request, response: Response, token: str) -> None:
     samesite = _session_cookie_samesite(request)
     response.set_cookie(
-        settings.session_cookie_name,
+        settings.effective_session_cookie_name,
         token,
         max_age=settings.session_ttl_seconds,
         httponly=True,
@@ -196,10 +196,11 @@ async def get_session(user: dict = Depends(get_current_user)) -> SessionUser:
 
 @router.post("/logout")
 async def logout(request: Request, response: Response) -> dict[str, bool]:
-    token = request.cookies.get(settings.session_cookie_name)
+    cookie_name = settings.effective_session_cookie_name
+    token = request.cookies.get(cookie_name)
     if token:
         await revoke_session(token)
-    response.delete_cookie(settings.session_cookie_name)
+    response.delete_cookie(cookie_name)
     return {"ok": True}
 
 

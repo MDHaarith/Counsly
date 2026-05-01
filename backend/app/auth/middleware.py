@@ -13,7 +13,7 @@ logger = logging.getLogger("counsly.security.auth")
 
 async def get_current_user(request: Request) -> dict:
     """Extract and return the current user from an httpOnly session cookie."""
-    token = request.cookies.get(settings.session_cookie_name)
+    token = request.cookies.get(settings.effective_session_cookie_name)
     if not token:
         logger.warning("session_cookie_missing path=%s", request.url.path)
         raise api_error(401, "Not authenticated", "NOT_AUTHENTICATED")
