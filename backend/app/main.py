@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.config import settings, validate_runtime_settings
 from app.db.connection import close_db_pool, get_db_connection, open_db_pool
-from app.routers import auth, choices, config, explore, onboarding, payments, profile, recommendations
+from app.routers import auth, chat, choices, config, explore, onboarding, payments, profile, recommendations
 
 
 @asynccontextmanager
@@ -99,6 +99,15 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail), "code": "HTTP_ERROR"})
 
 
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal server error", "code": "INTERNAL_ERROR"},
+    )
+
+
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"])
 app.include_router(recommendations.router, prefix="/api/recommendations", tags=["recommendations"])
@@ -107,6 +116,7 @@ app.include_router(explore.router, prefix="/api/explore", tags=["explore"])
 app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(config.router, prefix="/api/config", tags=["config"])
+app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 
 
 @app.get("/")

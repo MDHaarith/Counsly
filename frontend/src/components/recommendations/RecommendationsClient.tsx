@@ -31,12 +31,15 @@ interface RecommendationsPayload {
 export function RecommendationsClient({ initialData }: { initialData: RecommendationsPayload | null }) {
   const [data] = useState<RecommendationsPayload | null>(initialData);
   const [adding, setAdding] = useState<string | null>(null);
+  const [added, setAdded] = useState<Set<string>>(new Set());
 
   async function add(item: RecommendationItem) {
     const key = `${item.college_code}-${item.branch_code}`;
+    if (added.has(key)) return;
     setAdding(key);
     try {
       await postJson("/api/choices", { college_code: item.college_code, branch_code: item.branch_code });
+      setAdded((prev) => new Set(prev).add(key));
     } catch (err) {
       console.error("Failed to add choice", err);
     } finally {
@@ -99,9 +102,9 @@ export function RecommendationsClient({ initialData }: { initialData: Recommenda
                 variant="secondary"
                 className="w-auto"
                 onClick={() => add(item)}
-                disabled={adding === `${item.college_code}-${item.branch_code}`}
+                disabled={adding === `${item.college_code}-${item.branch_code}` || added.has(`${item.college_code}-${item.branch_code}`)}
               >
-                {adding === `${item.college_code}-${item.branch_code}` ? "Adding" : "Add"}
+                {added.has(`${item.college_code}-${item.branch_code}`) ? "Added ✓" : adding === `${item.college_code}-${item.branch_code}` ? "Adding" : "Add"}
               </Button>
             </div>
           </Card>

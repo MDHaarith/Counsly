@@ -118,6 +118,7 @@ class ChoiceResponse(BaseModel):
     system_category: SafetyCategory | None
     manual_category: SafetyCategory | None
     notes: str | None
+    available_total: int | None = None
 
 
 class ChoicesEnvelope(BaseModel):
@@ -187,3 +188,21 @@ class CollegeDetailResponse(ExploreCollegeResponse):
     website: str | None
     email: str | None
     branches: list[CollegeBranchInsight]
+
+
+class ConversationResponse(BaseModel):
+    id: str
+    title: str | None
+    created_at: str
+
+
+class ChatMessageResponse(BaseModel):
+    id: str
+    role: str
+    content: str
+    created_at: str
+
+
+class ChatRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+

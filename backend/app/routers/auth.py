@@ -4,7 +4,6 @@ import asyncio
 import hmac
 import logging
 from secrets import token_urlsafe
-from urllib.parse import urlparse
 from uuid import uuid4
 
 import httpx
@@ -30,35 +29,16 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 OAUTH_STATE_COOKIE = "counsly_oauth_state"
 
 
-def _request_origin(request: Request) -> str:
-    scheme = request.headers.get("x-forwarded-proto", "").split(",")[0].strip() or request.url.scheme
-    host = request.headers.get("x-forwarded-host", "").split(",")[0].strip() or request.headers.get("host", "")
-    if not host:
-        return str(request.base_url).rstrip("/")
-    return f"{scheme}://{host}"
 
-
-def _session_cookie_samesite(request: Request) -> str:
-    if not settings.frontend_url:
-        return "lax"
-    frontend = urlparse(settings.frontend_url)
-    backend = urlparse(_request_origin(request))
-    return "none" if (frontend.scheme, frontend.netloc) != (backend.scheme, backend.netloc) else "lax"
-
-
-def _public_callback_url(request: Request) -> str:
-    callback_path = request.url_for("google_callback").path
-    return f"{_request_origin(request)}{callback_path}"
-
-
-def _set_session_cookie(request: Request, response: Response, token: str) -> None:
-    samesite = _session_cookie_samesite(request)
+def _set_session_cookie(response: Response, token: str) -> None:
+    same_origin = not settings.frontend_url or settings.frontend_url.rstrip("/") == ""
+    samesite = "lax" if same_origin else "none"
     response.set_cookie(
         settings.effective_session_cookie_name,
         token,
         max_age=settings.session_ttl_seconds,
         httponly=True,
-        secure=samesite == "none" or settings.frontend_url.startswith("https://"),
+        secure=True,
         samesite=samesite,
     )
 
@@ -86,7 +66,8 @@ def _profile_from_verified_claims(verified_claims: dict) -> dict[str, object]:
 async def google_start(request: Request) -> RedirectResponse:
     if not settings.google_client_id:
         raise service_unavailable("Google OAuth is not configured", "GOOGLE_OAUTH_NOT_CONFIGURED")
-    redirect_uri = _public_callback_url(request)
+    # Use frontend URL so Google redirects through the frontend proxy
+    redirect_uri = f"{settings.frontend_url}/api/auth/callback"
     state = token_urlsafe(32)
     google_url = await get_google_auth_url(redirect_uri, state)
     response = RedirectResponse(url=google_url)
@@ -110,7 +91,8 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
         logger.warning("oauth_state_invalid path=%s has_cookie=%s", request.url.path, bool(expected_state))
         raise api_error(401, "Google OAuth state verification failed", "GOOGLE_OAUTH_STATE_INVALID")
 
-    redirect_uri = _public_callback_url(request)
+    # Use frontend URL so redirect_uri matches what was sent to Google in google_start
+    redirect_uri = f"{settings.frontend_url}/api/auth/callback"
     async with httpx.AsyncClient(timeout=15) as client:
         token_res = await client.post(
             GOOGLE_TOKEN_URL,
@@ -177,7 +159,10 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
                 """
                 INSERT INTO workspaces (app_user_id, workspace_kind, display_name, season_year)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT (app_user_id) DO UPDATE SET updated_at = now()
+                ON CONFLICT (app_user_id) DO UPDATE SET
+                    display_name = EXCLUDED.display_name,
+                    season_year = EXCLUDED.season_year,
+                    updated_at = now()
                 """,
                 (app_user["id"], "personal", profile.get("name"), settings.season_year),
             )
@@ -185,7 +170,7 @@ async def google_callback(request: Request, code: str, state: str) -> RedirectRe
 
     token = await create_session(str(app_user["id"]))
     response = RedirectResponse(url=f"{settings.frontend_url}/dashboard")
-    _set_session_cookie(request, response, token)
+    _set_session_cookie(response, token)
     response.delete_cookie(OAUTH_STATE_COOKIE)
     return response
 

@@ -10,7 +10,7 @@ export function AuthNavWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <main className={["mx-auto min-h-screen max-w-md", onboarding ? "pb-6" : "pb-24"].join(" ")}>
+      <main className={["mx-auto min-h-screen max-w-lg px-4", onboarding ? "pb-6" : "pb-[5.5rem]"].join(" ")}>
         {children}
       </main>
       {!onboarding && <TabBar />}

@@ -30,7 +30,7 @@ export default function RankPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="font-serif text-[30px] font-medium leading-tight">Rank band</h1>
+        <h1 className="font-serif text-3xl font-medium leading-tight">Rank band</h1>
         <p className="mt-2 text-sm leading-relaxed text-olive-gray">This is range guidance from available TNEA data. Official TNEA rank replaces it when released.</p>
       </div>
       <Card variant="featured">
@@ -40,9 +40,11 @@ export default function RankPage() {
         {rank && !rank.is_abstain && (
           <div>
             <p className="text-sm text-olive-gray">Estimated range</p>
-            <p className="mt-2 font-mono text-[34px] font-semibold leading-none">{rank.rank_min} - {rank.rank_max}</p>
+            <p className="mt-2 font-mono text-4xl font-semibold leading-none">
+              {rank.rank_min ?? "—"} – {rank.rank_max ?? "—"}
+            </p>
             <div className="mt-4 flex items-center gap-2">
-              <Badge>{rank.confidence_label} confidence</Badge>
+              <Badge>{rank.confidence_label ?? "Unknown"} confidence</Badge>
               <Badge>Historical range</Badge>
               <span className="text-xs text-stone-gray">{rank.sample_size ?? 0} samples</span>
             </div>

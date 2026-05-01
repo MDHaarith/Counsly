@@ -34,9 +34,17 @@ backend/.env
 # IDE
 .vscode/
 .idea/
+.cursor/
+.cursorrules
 *.swp
 *.swo
 *~
+
+# Other editor/agent configs
+.mcp.json
+.opencode.json
+.windsurfrules
+conductor/
 
 # OS
 .DS_Store

@@ -13,13 +13,15 @@ interface BranchInsight {
 
 export function CollegeDetailClient({ branches, collegeCode }: { branches: BranchInsight[], collegeCode: string }) {
   const [adding, setAdding] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function add(branch: BranchInsight) {
     setAdding(branch.branch_code);
+    setError(null);
     try {
       await postJson("/api/choices", { college_code: collegeCode, branch_code: branch.branch_code });
     } catch (err) {
-      console.error("Failed to add choice", err);
+      setError(err instanceof Error ? err.message : "Could not add to choices.");
     } finally {
       setAdding(null);
     }
@@ -27,6 +29,7 @@ export function CollegeDetailClient({ branches, collegeCode }: { branches: Branc
 
   return (
     <div className="space-y-3">
+      {error && <p className="rounded-xl bg-error-crimson/10 px-4 py-2 text-sm text-error-crimson">{error}</p>}
       <h2 className="font-serif text-xl font-medium">Branches</h2>
       {branches.map((branch) => (
         <Card key={branch.branch_code}>

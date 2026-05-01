@@ -1,1 +1,0 @@
-# TNEA College Ranking Algorithm

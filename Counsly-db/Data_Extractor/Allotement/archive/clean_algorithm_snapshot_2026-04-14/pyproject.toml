@@ -1,6 +1,0 @@
-[project]
-name = "tnea-allotment-parser"
-version = "0.1.0"
-description = "Parse TNEA allotment PDFs into standardized CSV outputs."
-requires-python = ">=3.12"
-

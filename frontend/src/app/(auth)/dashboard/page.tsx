@@ -36,10 +36,10 @@ export default async function DashboardPage() {
   const unverified = status ? Object.entries(status.data_freshness).filter(([, value]) => value !== "verified") : [];
 
   return (
-    <div className="space-y-5 p-5">
+    <div className="space-y-5">
       <div>
         <p className="text-sm font-medium text-olive-gray">Home</p>
-        <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">{profile?.full_name ? `Hi, ${profile.full_name}` : "Your counselling dashboard"}</h1>
+        <h1 className="mt-1 font-serif text-3xl font-medium leading-tight">{profile?.full_name ? `Hi, ${profile.full_name}` : "Your counselling dashboard"}</h1>
       </div>
 
       {error && (
@@ -73,7 +73,8 @@ export default async function DashboardPage() {
       )}
 
       {status && status.round_dates.length > 0 && (
-        <Card>
+        <Link href="/rounds" className="block">
+          <Card>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="font-serif text-lg font-medium">TNEA rounds</h2>
@@ -89,7 +90,8 @@ export default async function DashboardPage() {
               </div>
             ))}
           </div>
-        </Card>
+          </Card>
+        </Link>
       )}
 
       <div className="grid gap-3">

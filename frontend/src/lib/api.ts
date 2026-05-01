@@ -26,7 +26,7 @@ export class ApiClientError extends Error {
 
 export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { raw, ...fetchOptions } = options;
-  const requestUrl = path.startsWith("http://") || path.startsWith("https://") ? path : path;
+  const requestUrl = path;
 
   const res = await fetch(requestUrl, {
     ...fetchOptions,
@@ -50,18 +50,6 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
   }
 
   return res.json() as Promise<T>;
-}
-
-export function getConfigStatus<T>(headers?: HeadersInit) {
-  return apiClient<T>("/api/config/status", { headers });
-}
-
-export function getSession<T>(headers?: HeadersInit) {
-  return apiClient<T>("/api/auth/session", { headers });
-}
-
-export function getProfile<T>(headers?: HeadersInit) {
-  return apiClient<T>("/api/profile", { headers });
 }
 
 export function postJson<T>(path: string, body: unknown, headers?: HeadersInit) {

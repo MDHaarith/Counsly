@@ -29,10 +29,10 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 p-5">
+    <div className="space-y-4">
       <div>
         <p className="text-sm font-medium text-olive-gray">Profile</p>
-        <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">Student details</h1>
+        <h1 className="mt-1 font-serif text-3xl font-medium leading-tight">Student details</h1>
       </div>
 
       {error && (
@@ -71,6 +71,50 @@ export default async function ProfilePage() {
               </p>
             </div>
           </Card>
+
+          {/* Analytics section */}
+          <details className="group">
+            <summary className="cursor-pointer list-none">
+              <Card>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-serif text-lg font-medium">Your Stats</h2>
+                  <span className="text-sm text-olive-gray transition-transform group-open:rotate-180">▼</span>
+                </div>
+              </Card>
+            </summary>
+            <Card className="mt-2">
+              <div className="space-y-3 text-sm">
+                {profile.cutoff_mark != null && (
+                  <div>
+                    <p className="text-olive-gray">Cutoff breakdown</p>
+                    <p className="mt-1 font-mono">
+                      {profile.maths_mark ?? "—"} + {profile.physics_mark != null ? `${profile.physics_mark}/2` : "—"} + {profile.chemistry_mark != null ? `${profile.chemistry_mark}/2` : "—"} ={" "}
+                      <span className="font-semibold text-terracotta">{profile.cutoff_mark}</span>
+                    </p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-olive-gray">Community</p>
+                    <p className="mt-0.5 font-medium">{profile.community_quota ?? "Not set"}</p>
+                  </div>
+                  <div>
+                    <p className="text-olive-gray">District</p>
+                    <p className="mt-0.5 font-medium">{profile.home_district ?? "Not set"}</p>
+                  </div>
+                </div>
+                {profile.official_rank != null && (
+                  <div>
+                    <p className="text-olive-gray">Official TNEA rank</p>
+                    <p className="mt-0.5 font-mono font-semibold">{profile.official_rank}</p>
+                  </div>
+                )}
+                {profile.official_rank == null && (
+                  <p className="text-stone-gray">Official rank not available yet</p>
+                )}
+              </div>
+            </Card>
+          </details>
 
           <ProfileClient isPaid={profile.paid} />
         </>

@@ -46,7 +46,7 @@ export function ChoicesClient({ initialData }: { initialData: ChoicesPayload | n
     try {
       setData(await postJson<ChoicesPayload>(`/api/choices/${choice.id}/move`, { priority: next }));
     } catch (err) {
-      console.error("Failed to move choice", err);
+      setError(err instanceof Error ? err.message : "Could not move choice.");
     } finally {
       setMoving(null);
     }
@@ -91,7 +91,7 @@ export function ChoicesClient({ initialData }: { initialData: ChoicesPayload | n
         }),
       );
     } catch (err) {
-      console.error("Failed to update choice", err);
+      setError(err instanceof Error ? err.message : "Could not update choice.");
     } finally {
       setMoving(null);
     }
@@ -102,7 +102,7 @@ export function ChoicesClient({ initialData }: { initialData: ChoicesPayload | n
     try {
       setData(await apiClient<ChoicesPayload>(`/api/choices/${choice.id}`, { method: "DELETE" }));
     } catch (err) {
-      console.error("Failed to delete choice", err);
+      setError(err instanceof Error ? err.message : "Could not delete choice.");
     } finally {
       setMoving(null);
     }

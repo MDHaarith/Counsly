@@ -1,9 +1,0 @@
-{
-  "name": "tnea-allotement-tui",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "tui": "node tui/ranking_tui.ts",
-    "tui:ranking": "node tui/ranking_tui.ts"
-  }
-}

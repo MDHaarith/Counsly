@@ -43,16 +43,13 @@ async function proxy(request: NextRequest, params: Promise<{ path: string[] }>) 
 
   if (location && upstreamResponse.status >= 300 && upstreamResponse.status < 400) {
     const response = NextResponse.redirect(location, upstreamResponse.status);
+    const cookies = responseHeaders.getSetCookie();
+    responseHeaders.delete("location");
+    responseHeaders.delete("set-cookie");
     for (const [name, value] of responseHeaders.entries()) {
-      if (name.toLowerCase() === "location") {
-        continue;
-      }
-      if (name.toLowerCase() === "set-cookie") {
-        continue;
-      }
       response.headers.set(name, value);
     }
-    for (const cookie of responseHeaders.getSetCookie()) {
+    for (const cookie of cookies) {
       response.headers.append("set-cookie", cookie);
     }
     return response;

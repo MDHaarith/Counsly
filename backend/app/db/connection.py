@@ -9,7 +9,6 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
 from app.config import settings
-from app.errors import service_unavailable
 
 _pool: AsyncConnectionPool | None = None
 _is_serverless = os.environ.get("VERCEL") == "1"
@@ -19,7 +18,7 @@ async def open_db_pool() -> None:
     """Open the shared PostgreSQL pool for the FastAPI process."""
     global _pool
     if not settings.database_url:
-        raise service_unavailable("DATABASE_URL is not configured", "DATABASE_NOT_CONFIGURED")
+        raise RuntimeError("DATABASE_URL is not configured")
     if _pool is None:
         _pool = AsyncConnectionPool(
             settings.database_url,
@@ -43,7 +42,7 @@ async def close_db_pool() -> None:
 async def get_db_connection() -> AsyncGenerator[AsyncConnection, None]:
     """Yield a PostgreSQL connection from the process-wide pool."""
     if not settings.database_url:
-        raise service_unavailable("DATABASE_URL is not configured", "DATABASE_NOT_CONFIGURED")
+        raise RuntimeError("DATABASE_URL is not configured")
     await open_db_pool()
     assert _pool is not None
     async with _pool.connection() as conn:

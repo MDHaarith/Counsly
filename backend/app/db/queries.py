@@ -286,14 +286,11 @@ async def list_choices(conn: AsyncConnection, workspace_id: str, paid: bool) -> 
             """
             SELECT ucp.id, ucp.priority, ucp.college_code, c.college_name,
                    ucp.branch_code, b.branch_name, c.district,
-                   ucp.system_category, ucp.manual_category, ucp.notes,
-                   sm.total AS available_total
+                   ucp.system_category, ucp.manual_category, ucp.notes
             FROM user_college_preferences ucp
             LEFT JOIN colleges c ON c.college_code = ucp.college_code
             LEFT JOIN branches b ON b.branch_code = ucp.branch_code
-            LEFT JOIN seat_matrix_current sm ON sm.college_code = ucp.college_code AND sm.branch_code = ucp.branch_code
             WHERE ucp.workspace_id = %s AND ucp.preference_group = %s AND ucp.active = true
-              AND (NOT EXISTS (SELECT 1 FROM seat_matrix_current) OR COALESCE(sm.total, 0) > 0)
             ORDER BY ucp.priority, ucp.created_at
             LIMIT %s
             """,
@@ -518,3 +515,106 @@ async def remove_choice(conn: AsyncConnection, workspace_id: str, paid: bool, ch
         )
     await conn.commit()
     return await list_choices(conn, workspace_id, paid)
+
+
+# === Chat queries ===
+
+
+async def count_user_messages(conn: AsyncConnection, workspace_id: str) -> int:
+    """Count total user messages across all conversations for free tier check."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            SELECT count(*) AS count
+            FROM chat_messages cm
+            JOIN conversations c ON c.id = cm.conversation_id
+            WHERE c.workspace_id = %s AND cm.role = 'user'
+            """,
+            (workspace_id,),
+        )
+        row = await cur.fetchone()
+    return int(row["count"]) if row else 0
+
+
+async def create_conversation(conn: AsyncConnection, workspace_id: str, title: str | None) -> dict[str, Any]:
+    """Create a new conversation."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            INSERT INTO conversations (workspace_id, title)
+            VALUES (%s, %s)
+            RETURNING id, title, created_at
+            """,
+            (workspace_id, title),
+        )
+        row = await cur.fetchone()
+    await conn.commit()
+    return {**row, "id": str(row["id"]), "created_at": str(row["created_at"])}
+
+
+async def list_conversations(conn: AsyncConnection, workspace_id: str) -> list[dict[str, Any]]:
+    """List all conversations for a workspace, newest first."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            SELECT id, title, created_at
+            FROM conversations
+            WHERE workspace_id = %s
+            ORDER BY updated_at DESC
+            LIMIT 50
+            """,
+            (workspace_id,),
+        )
+        rows = await cur.fetchall()
+    return [{"id": str(r["id"]), "title": r["title"], "created_at": str(r["created_at"])} for r in rows]
+
+
+async def save_message(conn: AsyncConnection, conversation_id: str, workspace_id: str, role: str, content: str) -> dict[str, Any]:
+    """Save a chat message and update conversation timestamp."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            INSERT INTO chat_messages (conversation_id, role, content)
+            SELECT %s, %s, %s
+            WHERE EXISTS (SELECT 1 FROM conversations WHERE id = %s AND workspace_id = %s)
+            RETURNING id, role, content, created_at
+            """,
+            (conversation_id, role, content, conversation_id, workspace_id),
+        )
+        row = await cur.fetchone()
+        if not row:
+            raise LookupError("conversation not found")
+        await cur.execute(
+            "UPDATE conversations SET updated_at = now() WHERE id = %s",
+            (conversation_id,),
+        )
+        # Auto-title on first user message
+        if role == "user":
+            await cur.execute(
+                """
+                UPDATE conversations SET title = %s
+                WHERE id = %s AND title IS NULL
+                """,
+                (content[:80], conversation_id),
+            )
+    await conn.commit()
+    return {"id": str(row["id"]), "role": row["role"], "content": row["content"], "created_at": str(row["created_at"])}
+
+
+async def get_messages(conn: AsyncConnection, conversation_id: str, workspace_id: str, limit: int = 100) -> list[dict[str, Any]]:
+    """Get messages for a conversation, oldest first."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            """
+            SELECT cm.id, cm.role, cm.content, cm.created_at
+            FROM chat_messages cm
+            JOIN conversations c ON c.id = cm.conversation_id
+            WHERE cm.conversation_id = %s AND c.workspace_id = %s
+            ORDER BY cm.created_at ASC
+            LIMIT %s
+            """,
+            (conversation_id, workspace_id, limit),
+        )
+        rows = await cur.fetchall()
+    return [{"id": str(r["id"]), "role": r["role"], "content": r["content"], "created_at": str(r["created_at"])} for r in rows]
+
