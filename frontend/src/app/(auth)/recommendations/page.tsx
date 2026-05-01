@@ -1,5 +1,5 @@
 import { RecommendationsClient } from "@/components/recommendations/RecommendationsClient";
-import { getServerApi } from "@/lib/serverApi";
+import { getServerApi, redirectToLoginOnUnauthorized } from "@/lib/serverApi";
 
 interface RecommendationItem {
   college_code: string;
@@ -27,6 +27,7 @@ export default async function RecommendationsPage() {
   try {
     initialData = await getServerApi<RecommendationsPayload>("/api/recommendations");
   } catch (err) {
+    redirectToLoginOnUnauthorized(err, "/recommendations");
     error = err instanceof Error ? err.message : "Could not load recommendations.";
   }
 

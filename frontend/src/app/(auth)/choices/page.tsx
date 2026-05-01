@@ -1,5 +1,5 @@
 import { ChoicesClient } from "@/components/choices/ChoicesClient";
-import { getServerApi } from "@/lib/serverApi";
+import { getServerApi, redirectToLoginOnUnauthorized } from "@/lib/serverApi";
 
 interface ChoiceItem {
   id: string;
@@ -27,6 +27,7 @@ export default async function ChoicesPage() {
   try {
     initialData = await getServerApi<ChoicesPayload>("/api/choices");
   } catch (err) {
+    redirectToLoginOnUnauthorized(err, "/choices");
     error = err instanceof Error ? err.message : "Could not load choices.";
   }
 

@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CollegeDetailClient } from "@/components/explore/CollegeDetailClient";
-import { getServerApi } from "@/lib/serverApi";
+import { getServerApi, redirectToLoginOnUnauthorized } from "@/lib/serverApi";
 
 interface BranchInsight {
   branch_code: string;
@@ -31,6 +31,7 @@ export default async function CollegeDetailPage({ params }: { params: Promise<{ 
   try {
     detail = await getServerApi<CollegeDetail>(`/api/explore/${code}`);
   } catch (err) {
+    redirectToLoginOnUnauthorized(err, `/explore/${code}`);
     error = err instanceof Error ? err.message : "Could not load college.";
   }
 

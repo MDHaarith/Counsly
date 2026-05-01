@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { ProfileClient } from "@/components/profile/ProfileClient";
-import { getServerApi } from "@/lib/serverApi";
+import { getServerApi, redirectToLoginOnUnauthorized } from "@/lib/serverApi";
 
 interface ProfilePayload {
   full_name: string | null;
@@ -24,6 +24,7 @@ export default async function ProfilePage() {
   try {
     profile = await getServerApi<ProfilePayload>("/api/profile");
   } catch (err) {
+    redirectToLoginOnUnauthorized(err, "/profile");
     error = err instanceof Error ? err.message : "Could not load profile.";
   }
 

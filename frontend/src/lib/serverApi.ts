@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { apiClient } from "@/lib/api";
+import { ApiClientError, apiClient } from "@/lib/api";
 
 const SESSION_COOKIE_NAME = process.env.NEXT_PUBLIC_SESSION_COOKIE_NAME ?? "counsly_session";
 
@@ -31,4 +32,10 @@ export async function getServerApi<T>(path: string, init: RequestInit = {}): Pro
     ...init,
     headers: requestHeaders,
   });
+}
+
+export function redirectToLoginOnUnauthorized(error: unknown, nextPath: string): never | void {
+  if (error instanceof ApiClientError && error.status === 401) {
+    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  }
 }

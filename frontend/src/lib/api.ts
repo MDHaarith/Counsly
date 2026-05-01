@@ -2,6 +2,18 @@ interface ApiOptions extends RequestInit {
   raw?: boolean;
 }
 
+export class ApiClientError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export async function apiClient<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { raw, ...fetchOptions } = options;
   const requestUrl = path.startsWith("http://") || path.startsWith("https://") ? path : path;
@@ -19,13 +31,15 @@ export async function apiClient<T>(path: string, options: ApiOptions = {}): Prom
 
   if (!res.ok) {
     let errorMessage = `API error ${res.status}`;
+    let errorCode: string | undefined;
     try {
       const body = await res.json();
       errorMessage = body.error ?? errorMessage;
+      errorCode = body.code;
     } catch {
       // ignore json parse error
     }
-    throw new Error(errorMessage);
+    throw new ApiClientError(errorMessage, res.status, errorCode);
   }
 
   return res.json() as Promise<T>;

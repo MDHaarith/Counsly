@@ -1,5 +1,5 @@
 import { CollegeSearch } from "@/components/explore/CollegeSearch";
-import { getServerApi } from "@/lib/serverApi";
+import { getServerApi, redirectToLoginOnUnauthorized } from "@/lib/serverApi";
 
 interface CollegeItem {
   college_code: string;
@@ -21,6 +21,7 @@ export default async function ExplorePage() {
   try {
     initialData = await getServerApi<ExplorePayload>("/api/explore");
   } catch (err) {
+    redirectToLoginOnUnauthorized(err, "/explore");
     console.error("Failed to fetch initial explore data", err);
   }
 

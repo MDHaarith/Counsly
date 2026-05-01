@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { getServerApi } from "@/lib/serverApi";
+import { getServerApi, redirectToLoginOnUnauthorized } from "@/lib/serverApi";
 
 interface StatusPayload {
   tnea_phase: number;
@@ -29,6 +29,7 @@ export default async function DashboardPage() {
       getServerApi<ProfilePayload>("/api/profile"),
     ]);
   } catch (err) {
+    redirectToLoginOnUnauthorized(err, "/dashboard");
     error = err instanceof Error ? err.message : "Could not load dashboard.";
   }
 
