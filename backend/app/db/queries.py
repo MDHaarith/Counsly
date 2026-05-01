@@ -13,6 +13,12 @@ def _scalar_config(value: Any) -> Any:
     return value
 
 
+def _stringify_workspace_id(payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not payload or payload.get("workspace_id") is None:
+        return payload
+    return {**payload, "workspace_id": str(payload["workspace_id"])}
+
+
 async def fetch_config(conn: AsyncConnection) -> dict[str, Any]:
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute("SELECT config_key, value_json FROM app_config")
@@ -115,7 +121,7 @@ async def save_marks(conn: AsyncConnection, workspace_id: str, maths: int, physi
         )
         state = await cur.fetchone()
     await conn.commit()
-    return {**state, "cutoff_mark": cutoff}
+    return _stringify_workspace_id({**state, "cutoff_mark": cutoff})
 
 
 async def save_details(conn: AsyncConnection, workspace_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -164,7 +170,7 @@ async def save_details(conn: AsyncConnection, workspace_id: str, payload: dict[s
         await cur.execute("SELECT cutoff_mark FROM student_profiles WHERE workspace_id = %s", (workspace_id,))
         profile = await cur.fetchone()
     await conn.commit()
-    return {**state, "cutoff_mark": profile["cutoff_mark"] if profile else None}
+    return _stringify_workspace_id({**state, "cutoff_mark": profile["cutoff_mark"] if profile else None})
 
 
 async def fetch_rank_band(conn: AsyncConnection, aggregate_mark: Decimal) -> dict[str, Any] | None:

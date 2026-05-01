@@ -1,5 +1,6 @@
 import ast
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
@@ -7,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.config import settings
+from app.db.queries import _stringify_workspace_id
 from app.services.recommendation_service import compute_safety
 from app.models import MarksRequest
 from app.routers import auth
@@ -42,6 +44,22 @@ def test_marks_request_rejects_out_of_range_marks() -> None:
 
     with pytest.raises(ValidationError):
         MarksRequest(maths_mark=90, physics_mark=-1, chemistry_mark=80)
+
+
+def test_onboarding_workspace_id_is_stringified_for_responses() -> None:
+    payload = {
+        "workspace_id": UUID("c6e55baa-2ef4-4b90-8a95-c52a6d5ce17e"),
+        "current_step": 2,
+        "is_complete": False,
+        "eligible": True,
+        "eligibility_reason": None,
+        "cutoff_mark": 180,
+    }
+
+    result = _stringify_workspace_id(payload)
+
+    assert result is not None
+    assert result["workspace_id"] == "c6e55baa-2ef4-4b90-8a95-c52a6d5ce17e"
 
 
 def test_round_dates_stop_at_first_gap(monkeypatch: pytest.MonkeyPatch) -> None:
