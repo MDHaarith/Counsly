@@ -1,13 +1,8 @@
 import { type NextRequest } from "next/server";
 
-const API_PROXY_TARGET = (process.env.API_PROXY_TARGET ?? "").trim().replace(/\/$/, "");
+import { cloneProxyResponseHeaders, stripHopByHopHeaders } from "@/lib/proxyHeaders";
 
-function stripHopByHopHeaders(headers: Headers) {
-  headers.delete("connection");
-  headers.delete("content-length");
-  headers.delete("host");
-  headers.delete("transfer-encoding");
-}
+const API_PROXY_TARGET = (process.env.API_PROXY_TARGET ?? "").trim().replace(/\/$/, "");
 
 async function proxy(request: NextRequest, params: Promise<{ path: string[] }>) {
   if (!API_PROXY_TARGET) {
@@ -43,8 +38,7 @@ async function proxy(request: NextRequest, params: Promise<{ path: string[] }>) 
     cache: "no-store",
   });
 
-  const responseHeaders = new Headers(upstreamResponse.headers);
-  stripHopByHopHeaders(responseHeaders);
+  const responseHeaders = cloneProxyResponseHeaders(upstreamResponse.headers);
 
   return new Response(upstreamResponse.body, {
     status: upstreamResponse.status,
