@@ -26,11 +26,8 @@ export default async function ExplorePage() {
   }
 
   return (
-    <div className="space-y-4 p-5">
-      <div>
-        <p className="text-sm font-medium text-olive-gray">Explore</p>
-        <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">College directory</h1>
-      </div>
+    <div className="space-y-4">
+      <h1 className="font-serif text-3xl font-medium leading-tight">College directory</h1>
       <CollegeSearch initialData={initialData} />
     </div>
   );

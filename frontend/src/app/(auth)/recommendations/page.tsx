@@ -32,11 +32,8 @@ export default async function RecommendationsPage() {
   }
 
   return (
-    <div className="space-y-4 p-5">
-      <div>
-        <p className="text-sm font-medium text-olive-gray">Recommendations</p>
-        <h1 className="mt-1 font-serif text-[30px] font-medium leading-tight">College matches</h1>
-      </div>
+    <div className="space-y-4">
+      <h1 className="font-serif text-3xl font-medium leading-tight">College matches</h1>
 
       {error && (
         <div className="rounded-xl border border-error-crimson/20 bg-error-crimson/5 p-4 text-sm text-error-crimson">

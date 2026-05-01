@@ -388,8 +388,12 @@ async def fetch_college_detail(conn: AsyncConnection, college_code: str) -> dict
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
-            SELECT college_code, college_name, district, autonomous_status, hostel_boys,
-                   hostel_girls, transport_facilities, latitude, longitude, address, website, email
+            SELECT college_code, college_name, district, taluk, pincode, phone_fax,
+                   autonomous_status, minority_status, placement_record,
+                   hostel_boys, hostel_girls, transport_facilities,
+                   min_transport_charges, max_transport_charges,
+                   latitude, longitude, maps_url, address, website, email,
+                   raw_payload
             FROM colleges
             WHERE college_code = %s
             """,
@@ -398,6 +402,19 @@ async def fetch_college_detail(conn: AsyncConnection, college_code: str) -> dict
         college = await cur.fetchone()
         if not college:
             return None
+
+        # Extract rich fields from raw_payload JSONB
+        raw = college.pop("raw_payload", None) or {}
+        college["nearest_railway_station"] = raw.get("Nearest_Railway_Station")
+        college["distance_from_railway_km"] = raw.get("Distance_in_KMS_from_Nearest_Railway_Station")
+        college["distance_from_dist_hq_km"] = raw.get("Distance_in_KMS_from_Dist_HQ")
+        college["dean_principal"] = raw.get("Dean_Principal")
+        college["anti_ragging_phone"] = str(raw.get("Anti_Ragging_Phone_No", "")) or None
+        college["type_of_mess"] = raw.get("Type_of_Mess")
+        college["room_rent"] = raw.get("Room_Rent")
+        college["hostel_boys_type"] = raw.get("Hostel_Boys_Permanent_or_Rental")
+        college["hostel_girls_type"] = raw.get("Hostel_Girls_Permanent_or_Rental")
+
         await cur.execute(
             """
             SELECT cb.branch_code, COALESCE(cb.branch_name, b.branch_name) AS branch_name, sm.total AS total_seats
@@ -412,7 +429,22 @@ async def fetch_college_detail(conn: AsyncConnection, college_code: str) -> dict
             (college_code,),
         )
         branches = await cur.fetchall()
-    return {**college, "branches": branches}
+
+        await cur.execute(
+            """
+            SELECT branch_code, community_quota, MAX(general_rank) AS closing_rank,
+                   MAX(aggregate_mark) AS closing_mark, season_year, round_number
+            FROM cutoff_data
+            WHERE college_code = %s
+            GROUP BY branch_code, community_quota, season_year, round_number
+            ORDER BY season_year DESC, round_number DESC
+            LIMIT 200
+            """,
+            (college_code,),
+        )
+        cutoffs = await cur.fetchall()
+
+    return {**college, "branches": branches, "cutoffs": cutoffs}
 
 
 async def search_colleges(conn: AsyncConnection, query: str | None, district: str | None, limit: int = 50) -> dict[str, Any]:
@@ -444,6 +476,13 @@ async def search_colleges(conn: AsyncConnection, query: str | None, district: st
         await cur.execute("SELECT count(*) AS count FROM colleges WHERE " + where_sql, tuple(params))
         count_row = await cur.fetchone()
     return {"items": items, "total": int(count_row["count"] if count_row else len(items))}
+
+
+async def fetch_districts(conn: AsyncConnection) -> list[str]:
+    """Return distinct districts from colleges table, sorted alphabetically."""
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute("SELECT DISTINCT district FROM colleges WHERE district IS NOT NULL ORDER BY district")
+        return [row["district"] for row in await cur.fetchall()]
 
 
 async def move_choice(conn: AsyncConnection, workspace_id: str, paid: bool, choice_id: str, priority: int) -> dict[str, Any]:
@@ -517,18 +556,17 @@ async def remove_choice(conn: AsyncConnection, workspace_id: str, paid: bool, ch
     return await list_choices(conn, workspace_id, paid)
 
 
-# === Chat queries ===
+# === Chat queries (Storage-backed) ===
 
 
 async def count_user_messages(conn: AsyncConnection, workspace_id: str) -> int:
-    """Count total user messages across all conversations for free tier check."""
+    """Count total user messages via conversations.user_message_count (no DB message table)."""
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             """
-            SELECT count(*) AS count
-            FROM chat_messages cm
-            JOIN conversations c ON c.id = cm.conversation_id
-            WHERE c.workspace_id = %s AND cm.role = 'user'
+            SELECT COALESCE(SUM(user_message_count), 0) AS count
+            FROM conversations
+            WHERE workspace_id = %s
             """,
             (workspace_id,),
         )
@@ -570,51 +608,60 @@ async def list_conversations(conn: AsyncConnection, workspace_id: str) -> list[d
 
 
 async def save_message(conn: AsyncConnection, conversation_id: str, workspace_id: str, role: str, content: str) -> dict[str, Any]:
-    """Save a chat message and update conversation timestamp."""
+    """Save a chat message to Supabase Storage JSON and update conversation metadata."""
+    from datetime import datetime, timezone
+
+    from app.storage import download_messages, upload_messages
+
+    # Verify ownership
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
-            """
-            INSERT INTO chat_messages (conversation_id, role, content)
-            SELECT %s, %s, %s
-            WHERE EXISTS (SELECT 1 FROM conversations WHERE id = %s AND workspace_id = %s)
-            RETURNING id, role, content, created_at
-            """,
-            (conversation_id, role, content, conversation_id, workspace_id),
+            "SELECT id FROM conversations WHERE id = %s AND workspace_id = %s",
+            (conversation_id, workspace_id),
         )
-        row = await cur.fetchone()
-        if not row:
+        if not await cur.fetchone():
             raise LookupError("conversation not found")
+
+    # Download existing messages, append, upload
+    messages = await download_messages(workspace_id, conversation_id)
+    msg_id = str(len(messages) + 1)
+    now = datetime.now(timezone.utc).isoformat()
+    new_msg = {"id": msg_id, "role": role, "content": content, "created_at": now}
+    messages.append(new_msg)
+    await upload_messages(workspace_id, conversation_id, messages)
+
+    # Update conversation metadata in DB
+    async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
             "UPDATE conversations SET updated_at = now() WHERE id = %s",
             (conversation_id,),
         )
-        # Auto-title on first user message
         if role == "user":
             await cur.execute(
                 """
-                UPDATE conversations SET title = %s
-                WHERE id = %s AND title IS NULL
+                UPDATE conversations
+                SET user_message_count = user_message_count + 1, title = COALESCE(title, %s)
+                WHERE id = %s
                 """,
                 (content[:80], conversation_id),
             )
     await conn.commit()
-    return {"id": str(row["id"]), "role": row["role"], "content": row["content"], "created_at": str(row["created_at"])}
+    return new_msg
 
 
 async def get_messages(conn: AsyncConnection, conversation_id: str, workspace_id: str, limit: int = 100) -> list[dict[str, Any]]:
-    """Get messages for a conversation, oldest first."""
+    """Get messages from Supabase Storage JSON (verify ownership via conversations table)."""
+    from app.storage import download_messages
+
+    # Verify ownership
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute(
-            """
-            SELECT cm.id, cm.role, cm.content, cm.created_at
-            FROM chat_messages cm
-            JOIN conversations c ON c.id = cm.conversation_id
-            WHERE cm.conversation_id = %s AND c.workspace_id = %s
-            ORDER BY cm.created_at ASC
-            LIMIT %s
-            """,
-            (conversation_id, workspace_id, limit),
+            "SELECT id FROM conversations WHERE id = %s AND workspace_id = %s",
+            (conversation_id, workspace_id),
         )
-        rows = await cur.fetchall()
-    return [{"id": str(r["id"]), "role": r["role"], "content": r["content"], "created_at": str(r["created_at"])} for r in rows]
+        if not await cur.fetchone():
+            raise LookupError("conversation not found")
+
+    messages = await download_messages(workspace_id, conversation_id)
+    return messages[-limit:]
 

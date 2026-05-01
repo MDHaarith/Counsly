@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -26,21 +26,38 @@ interface ExplorePayload {
 
 export function CollegeSearch({ initialData }: { initialData: ExplorePayload | null }) {
   const [query, setQuery] = useState("");
+  const [district, setDistrict] = useState("");
+  const [districts, setDistricts] = useState<string[]>([]);
   const [data, setData] = useState<ExplorePayload | null>(initialData);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function search() {
+  useEffect(() => {
+    apiClient<{ districts: string[] }>("/api/explore/districts")
+      .then((res) => setDistricts(res.districts))
+      .catch(() => {});
+  }, []);
+
+  async function search(overrideDistrict?: string) {
     setLoading(true);
-    const params = query ? `?q=${encodeURIComponent(query)}` : "";
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    const d = overrideDistrict ?? district;
+    if (d) params.set("district", d);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     try {
-      setData(await apiClient<ExplorePayload>(`/api/explore${params}`));
+      setData(await apiClient<ExplorePayload>(`/api/explore${qs}`));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load colleges.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleDistrictChange(value: string) {
+    setDistrict(value);
+    search(value);
   }
 
   return (
@@ -53,10 +70,23 @@ export function CollegeSearch({ initialData }: { initialData: ExplorePayload | n
           className="flex-1"
           onKeyDown={(e) => e.key === "Enter" && search()}
         />
-        <Button variant="secondary" className="w-auto" onClick={search} disabled={loading}>
+        <Button variant="secondary" className="w-auto" onClick={() => search()} disabled={loading}>
           {loading ? "..." : "Search"}
         </Button>
       </div>
+
+      {districts.length > 0 && (
+        <select
+          value={district}
+          onChange={(e) => handleDistrictChange(e.target.value)}
+          className="w-full rounded-xl border border-warm-sand bg-white px-3 py-2.5 text-sm text-anthracite outline-none focus:border-terracotta"
+        >
+          <option value="">All districts</option>
+          {districts.map((d) => (
+            <option key={d} value={d}>{d}</option>
+          ))}
+        </select>
+      )}
 
       {error && (
         <Card>

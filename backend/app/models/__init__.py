@@ -187,7 +187,35 @@ class CollegeDetailResponse(ExploreCollegeResponse):
     address: str | None
     website: str | None
     email: str | None
+    taluk: str | None = None
+    pincode: str | None = None
+    phone_fax: str | None = None
+    minority_status: str | None = None
+    placement_record: str | None = None
+    min_transport_charges: int | None = None
+    max_transport_charges: int | None = None
+    maps_url: str | None = None
+    # Fields extracted from raw_payload JSONB
+    nearest_railway_station: str | None = None
+    distance_from_railway_km: int | None = None
+    distance_from_dist_hq_km: int | None = None
+    dean_principal: str | None = None
+    anti_ragging_phone: str | None = None
+    type_of_mess: str | None = None
+    room_rent: str | None = None
+    hostel_boys_type: str | None = None
+    hostel_girls_type: str | None = None
     branches: list[CollegeBranchInsight]
+    cutoffs: list["CutoffEntry"] = []
+
+
+class CutoffEntry(BaseModel):
+    branch_code: str
+    community_quota: str
+    closing_rank: int | None = None
+    closing_mark: float | None = None
+    season_year: int | None = None
+    round_number: int | None = None
 
 
 class ConversationResponse(BaseModel):

@@ -122,49 +122,13 @@ CREATE TABLE IF NOT EXISTS user_saved_filters (
 );
 ALTER TABLE user_saved_filters ENABLE ROW LEVEL SECURITY;
 
--- Chat persistence and free/paid usage counters.
-CREATE TABLE IF NOT EXISTS chat_threads (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID NOT NULL REFERENCES workspaces (id),
-    title TEXT,
-    archived BOOLEAN NOT NULL DEFAULT false,
-    last_message_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-ALTER TABLE chat_threads ENABLE ROW LEVEL SECURITY;
-CREATE INDEX IF NOT EXISTS idx_chat_threads_workspace_recent
-    ON chat_threads (workspace_id, archived, last_message_at DESC NULLS LAST);
-
-CREATE TABLE IF NOT EXISTS chat_messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    thread_id UUID NOT NULL REFERENCES chat_threads (id),
-    role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    token_estimate INT,
-    grounding_payload JSONB,
-    source_count INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_chat_message_role CHECK (role IN ($$system$$,$$assistant$$,$$user$$))
-);
-ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-CREATE INDEX IF NOT EXISTS idx_chat_messages_thread_created
-    ON chat_messages (thread_id, created_at);
-
-CREATE TABLE IF NOT EXISTS chat_usage_counters (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id UUID NOT NULL REFERENCES workspaces (id),
-    season_year INT NOT NULL,
-    free_messages_used INT NOT NULL DEFAULT 0,
-    paid_messages_used INT NOT NULL DEFAULT 0,
-    welcome_message_sent BOOLEAN NOT NULL DEFAULT false,
-    fingerprint_hash TEXT,
-    last_message_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT uq_chat_usage_counters UNIQUE (workspace_id, season_year)
-);
-ALTER TABLE chat_usage_counters ENABLE ROW LEVEL SECURITY;
+-- Chat persistence moved to Supabase Storage (see 007_chat_tables.sql).
+-- The tables below are intentionally commented out to avoid creating
+-- DB-backed message storage (150 MB database cap).
+--
+-- CREATE TABLE IF NOT EXISTS chat_threads ( ... );
+-- CREATE TABLE IF NOT EXISTS chat_messages ( ... );
+-- CREATE TABLE IF NOT EXISTS chat_usage_counters ( ... );
 
 INSERT INTO data_freshness (dataset_name, freshness_status, notes) VALUES
     ($$seat_matrix_current$$, $$missing$$, $$Sync from latest 2026 seat-matrix round for realistic choice filling$$),

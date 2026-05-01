@@ -9,7 +9,6 @@ interface StatusPayload {
   tnea_phase: number;
   total_rounds: number;
   round_dates: Array<{ round_number: number; date: string }>;
-  data_freshness: Record<string, string>;
 }
 
 interface ProfilePayload {
@@ -33,14 +32,11 @@ export default async function DashboardPage() {
     error = err instanceof Error ? err.message : "Could not load dashboard.";
   }
 
-  const unverified = status ? Object.entries(status.data_freshness).filter(([, value]) => value !== "verified") : [];
+
 
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-sm font-medium text-olive-gray">Home</p>
-        <h1 className="mt-1 font-serif text-3xl font-medium leading-tight">{profile?.full_name ? `Hi, ${profile.full_name}` : "Your counselling dashboard"}</h1>
-      </div>
+      <h1 className="font-serif text-3xl font-medium leading-tight">{profile?.full_name ? `Hi, ${profile.full_name}` : "Your counselling dashboard"}</h1>
 
       {error && (
         <Card>
@@ -109,21 +105,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {unverified.length > 0 && (
-        <Card>
-          <h2 className="font-serif text-lg font-medium">Data readiness</h2>
-          <p className="mt-1 text-sm leading-relaxed text-olive-gray">
-            Some datasets are not verified yet. Counsly will show data-not-ready states instead of decision claims.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {unverified.slice(0, 5).map(([key, value]) => (
-              <Badge key={key}>
-                {key}: {value}
-              </Badge>
-            ))}
-          </div>
-        </Card>
-      )}
+
     </div>
   );
 }

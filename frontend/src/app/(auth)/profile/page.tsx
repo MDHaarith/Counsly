@@ -30,10 +30,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-sm font-medium text-olive-gray">Profile</p>
-        <h1 className="mt-1 font-serif text-3xl font-medium leading-tight">Student details</h1>
-      </div>
+      <h1 className="font-serif text-3xl font-medium leading-tight">Student details</h1>
 
       {error && (
         <Card>
