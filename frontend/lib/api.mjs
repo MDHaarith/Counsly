@@ -396,3 +396,103 @@ export function verifyPayment(payload) {
     method: "POST",
   });
 }
+
+// ── Dataset API helpers ──────────────────────────────────────────
+
+export function fetchDatasetOverview() {
+  return apiRequest("/dataset/overview");
+}
+
+export function fetchFees(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiRequest(`/dataset/fees${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchTransport(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiRequest(`/dataset/transport${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchDistrictState() {
+  return apiRequest("/dataset/district-state");
+}
+
+export function fetchMaster(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiRequest(`/dataset/master${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchDistribution() {
+  return apiRequest("/dataset/distribution");
+}
+
+export function fetchCreditHours() {
+  return apiRequest("/dataset/credit-hours");
+}
+
+// ── Financials API helpers ───────────────────────────────────────
+
+export function fetchRevenue() {
+  return apiRequest("/financials/revenue");
+}
+
+export function fetchExpenditure() {
+  return apiRequest("/financials/expenditure");
+}
+
+export function fetchAid() {
+  return apiRequest("/financials/aid");
+}
+
+export function fetchFinancialMetrics() {
+  return apiRequest("/financials/metrics");
+}
+
+// ── Trends API helpers ───────────────────────────────────────────
+
+export function fetchCommunityView() {
+  return apiRequest("/trends/community-view");
+}
+
+export function fetchCreditHourTrends() {
+  return apiRequest("/trends/credit-hours");
+}
+
+export function fetchBranchState() {
+  return apiRequest("/trends/branch-state");
+}
+
+// ── Maps API helpers ─────────────────────────────────────────────
+
+export function fetchMapColleges(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiRequest(`/maps/colleges${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchTfcLocations(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiRequest(`/maps/tfc-locations${qs ? `?${qs}` : ""}`);
+}
+
+// ── Notifications API helpers ────────────────────────────────────
+
+export function fetchNotifications() {
+  return apiRequest("/notifications/");
+}
+
+export function fetchUnreadCount() {
+  return apiRequest("/notifications/unread-count");
+}
+
+export function dismissNotification(id) {
+  return apiRequest(`/notifications/${encodeURIComponent(id)}/dismiss`, { method: "POST" });
+}
+
+// ── Reporting API helpers ────────────────────────────────────────
+
+export function generateReport(reportType) {
+  return apiRequest("/reporting/generate", {
+    body: { report_type: reportType },
+    method: "POST",
+  });
+}

@@ -22,6 +22,13 @@ test("product inventory exposes every active 2027 frontend route", () => {
       "/compare",
       "/profile/edit",
       "/admin",
+      "/dataset",
+      "/financials",
+      "/trends",
+      "/maps",
+      "/notifications",
+      "/reporting",
+      "/data-versions",
     ],
   );
 });
@@ -33,15 +40,26 @@ test("authenticated navigation keeps the primary student workflow visible", () =
       "/dashboard",
       "/recommendations",
       "/choices",
-      "/analytics",
-      "/rounds",
+      "/compare",
       "/explore",
+      "/analytics",
+      "/dataset",
+      "/financials",
+      "/trends",
+      "/maps",
+      "/rounds",
+      "/notifications",
+      "/reporting",
+      "/data-versions",
+      "/admin",
       "/profile/edit",
     ],
   );
 });
 
-test("navigation does not expose a news or alerts module", () => {
+test("navigation does not expose a news module", () => {
   assert.equal(inventoryRoutes.some((route) => route.includes("news")), false);
-  assert.equal(navItems.some((item) => /news|alert/i.test(`${item.href} ${item.label} ${item.longLabel}`)), false);
+  assert.equal(navItems.some((item) => /news/i.test(`${item.href} ${item.label} ${item.longLabel}`)), false);
+  // Notifications/alerts are workspace system events, not a news module — verify they exist
+  assert.equal(navItems.some((item) => item.href === "/notifications"), true);
 });

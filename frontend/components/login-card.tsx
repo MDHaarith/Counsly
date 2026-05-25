@@ -8,6 +8,7 @@ import { useApp } from "@/app/AppContext";
 import { Badge, Surface } from "@/components/ui";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+const hasRealGoogleClient = GOOGLE_CLIENT_ID.length > 10 && GOOGLE_CLIENT_ID !== "mock-dev-client-id";
 
 declare global {
   interface Window {
@@ -31,10 +32,8 @@ export function LoginCard({ compact = false }: { compact?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const showGoogleSignIn = Boolean(GOOGLE_CLIENT_ID);
-
   useEffect(() => {
-    if (!showGoogleSignIn || !googleButtonRef.current || !window.google?.accounts?.id) {
+    if (!hasRealGoogleClient || !googleButtonRef.current || !window.google?.accounts?.id) {
       return;
     }
 
@@ -65,7 +64,7 @@ export function LoginCard({ compact = false }: { compact?: boolean }) {
       theme: "outline",
       width: 320,
     });
-  }, [email, login, name, router, showGoogleSignIn]);
+  }, [email, login, name, router]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -83,51 +82,100 @@ export function LoginCard({ compact = false }: { compact?: boolean }) {
   };
 
   return (
-    <Surface className={`space-y-5 ${compact ? "p-5" : "p-6 md:p-8"}`} tone="paper">
-      <Badge tone="coral">Student workspace</Badge>
-      <div className="space-y-2">
-        <h2 className="font-display text-3xl text-counsly-ink">Open your Counsly file.</h2>
-        <p className="text-sm leading-6 text-counsly-muted">
-          Start with your marks, community, and preferred branches. Production access uses a live backend session with Google identity verification.
-        </p>
-      </div>
-      <form className="space-y-3" onSubmit={submit}>
-        <label className="field-label">
-          Full name
-          <input
-            className="field"
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Mohamed Haarith"
-            required
-            value={name}
-          />
-        </label>
-        <label className="field-label">
-          Google email
-          <input
-            className="field"
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="student@gmail.com"
-            required
-            type="email"
-            value={email}
-          />
-        </label>
-        <button className="button-primary w-full" disabled={busy || showGoogleSignIn} type="submit">
-          {showGoogleSignIn ? "Use Google sign-in below" : busy ? "Opening workspace..." : "Continue to eligibility"} <ArrowRight className="h-4 w-4" />
-        </button>
-      </form>
-      {GOOGLE_CLIENT_ID ? (
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-counsly-muted">Recommended for production</p>
-          <div ref={googleButtonRef} />
+    <Surface className={`relative overflow-hidden ${compact ? "p-5" : "p-6 md:p-8"}`} tone="paper">
+      {/* Subtle radial gradient decoration */}
+      <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-counsly-coral/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-counsly-teal/5 blur-3xl" />
+
+      <div className="relative space-y-5">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-counsly-dark text-counsly-canvas">
+            <ShieldCheck className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.12em] text-counsly-muted">Student workspace</p>
+          </div>
         </div>
-      ) : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <p className="flex items-center gap-2 text-xs leading-5 text-counsly-muted">
-        <ShieldCheck className="h-4 w-4 text-counsly-safe" />
-        Private per-user choice lists, compare sessions, and filing notes.
-      </p>
+
+        <div className="space-y-2">
+          <h2 className="font-display text-3xl leading-tight text-counsly-ink">Continue your counselling workspace</h2>
+          <p className="text-sm leading-6 text-counsly-muted">
+            Enter your name and Google email to pick up your shortlists, snapshots, and round tracker — no password needed.
+          </p>
+        </div>
+
+        <form className="space-y-4" onSubmit={submit}>
+          <div className="space-y-3">
+            <label className="field-label">
+              Full name
+              <input
+                className="field"
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Mohamed Haarith"
+                required
+                value={name}
+              />
+            </label>
+            <label className="field-label">
+              Google email
+              <input
+                className="field"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="student@gmail.com"
+                required
+                type="email"
+                value={email}
+              />
+            </label>
+          </div>
+
+          <button className="button-primary w-full" disabled={busy} type="submit">
+            {busy ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Opening workspace...
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                Continue to dashboard <ArrowRight className="h-4 w-4" />
+              </span>
+            )}
+          </button>
+        </form>
+
+        {hasRealGoogleClient ? (
+          <>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-counsly-line" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-counsly-canvas px-3 text-counsly-muted">or sign in with Google</span>
+              </div>
+            </div>
+            <div className="flex justify-center" ref={googleButtonRef} />
+          </>
+        ) : (
+          <div className="rounded-lg border border-counsly-line bg-counsly-soft/50 px-4 py-3">
+            <p className="text-xs leading-5 text-counsly-muted">
+              <span className="font-medium text-counsly-ink">Dev mode:</span> Enter any name and email above to start. In production, Google sign-in verifies your identity before workspace access.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2.5 rounded-lg border border-counsly-line bg-counsly-soft/30 px-4 py-3">
+          <ShieldCheck className="h-4 w-4 shrink-0 text-counsly-safe" />
+          <p className="text-xs leading-5 text-counsly-muted">
+            Private per-user choice lists, compare sessions, and filing notes — isolated by workspace.
+          </p>
+        </div>
+      </div>
     </Surface>
   );
 }
