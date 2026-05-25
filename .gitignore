@@ -26,6 +26,9 @@ counsly.db
 *.sqlite
 *.sqlite3
 
+# Environment
+.env.local
+
 # Data extractor generated outputs
 supabase_db/Data_Extractor/output/
 supabase_db/Data_Extractor/**/output/
@@ -33,3 +36,4 @@ supabase_db/Data_Extractor/**/output/
 # OS clutter
 .DS_Store
 Thumbs.db
+.vercel

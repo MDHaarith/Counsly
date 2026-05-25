@@ -1,0 +1,21 @@
+/frontend
+/supabase_db
+/node_modules
+/.git
+*.sqlite
+*.sqlite3
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.ipynb
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+.next/
+out/
+*.log
+/counsly.db
+/Counsly Feature Flow Diagram*
+.vercel
