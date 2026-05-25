@@ -312,7 +312,6 @@ There is no 2026 per-round output under the current `Allotement/data/processed/`
 
 **Status:** Not present as a populated dataset.
 
-No concrete `rank_lookup` output or seeded table export was found in this repo.
 
 ---
 
@@ -403,15 +402,7 @@ No structured `round_dates` dataset or seed file was found.
 
 ---
 
-## 3.11 — News and Announcements
-
-**Status:** Not present as data in this repo.
-
-No structured `news_items` dataset or seed file was found.
-
----
-
-## 3.12 — Ingestion / Audit Subsystem
+## 3.11 — Ingestion / Audit Subsystem
 
 **Status:** File-based workflow exists, but not the planned database-first ingestion subsystem.
 
@@ -458,6 +449,5 @@ The repo currently has **real extracted data** for:
 It does **not** yet have real structured data for:
 - 2026 allotments
 - round dates
-- news items
 - rank lookup
 - the planned database ingestion audit subsystem

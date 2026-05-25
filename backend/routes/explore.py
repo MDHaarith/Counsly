@@ -1,0 +1,194 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, desc
+from typing import List, Dict, Any
+from backend.database import get_db
+from backend.models import User, College, Branch, CollegeBranch, CommunitySeat, CutoffData, TFCLocation
+from backend.schemas import CollegeSearchQuery, CollegeCompactResponse, CollegeDetailResponse, CutoffTrend
+from backend.routes.auth import get_current_user
+
+router = APIRouter(prefix="/explore", tags=["explore"])
+
+@router.post("/search", response_model=List[CollegeCompactResponse])
+def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    ws = current_user.workspace
+    home_district = None
+    if ws and ws.settings:
+        home_district = ws.settings.default_district
+        
+    query = db.query(College)
+    
+    # 1. Apply filters
+    if req.district:
+        query = query.filter(College.district == req.district)
+    if req.type:
+        query = query.filter(College.type == req.type)
+    if req.is_autonomous is not None:
+        query = query.filter(College.is_autonomous == req.is_autonomous)
+    if req.min_placement_rate is not None:
+        query = query.filter(College.placement_rate_pct >= req.min_placement_rate)
+    if req.search:
+        search_pat = f"%{req.search}%"
+        query = query.filter(
+            or_(
+                College.name.like(search_pat),
+                College.code.like(search_pat),
+                College.district.like(search_pat)
+            )
+        )
+        
+    if req.branch_code:
+        # Join with college_branches
+        query = query.join(CollegeBranch, CollegeBranch.college_code == College.code).filter(
+            CollegeBranch.branch_code == req.branch_code
+        )
+        
+    colleges = query.offset(req.offset).limit(req.limit).all()
+    
+    response = []
+    for c in colleges:
+        # Compute dynamic Fit Score (0-100)
+        fit_score = 50.0
+        
+        # 1. District preference (home district matches)
+        if home_district and c.district.lower() == home_district.lower():
+            fit_score += 15.0
+            
+        # 2. Autonomous benefits
+        if c.is_autonomous:
+            fit_score += 10.0
+            
+        # 3. Accreditation
+        if c.nba_accredited:
+            fit_score += 10.0
+            
+        # 4. Placements premium
+        if c.placement_rate_pct:
+            fit_score += (c.placement_rate_pct / 10.0)  # max +10 points
+            
+        if c.avg_package_lpa:
+            fit_score += min(15.0, c.avg_package_lpa * 1.5)  # max +15 points
+            
+        fit_score = min(100.0, max(0.0, fit_score))
+        
+        response.append(CollegeCompactResponse(
+            code=c.code,
+            name=c.name,
+            district=c.district,
+            type=c.type,
+            is_autonomous=c.is_autonomous,
+            fee_structure_annual=c.fee_structure_annual,
+            placement_rate_pct=c.placement_rate_pct,
+            fit_score=round(fit_score, 1)
+        ))
+        
+    # Sort response by fit_score descending
+    response.sort(key=lambda x: x.fit_score, reverse=True)
+    return response
+
+@router.get("/{college_code}", response_model=CollegeDetailResponse)
+def get_college_details(college_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    college = db.query(College).filter(College.code == college_code).first()
+    if not college:
+        raise HTTPException(status_code=404, detail="College not found")
+        
+    # Retrieve branches mapping
+    cb_mappings = db.query(CollegeBranch).filter(CollegeBranch.college_code == college_code).all()
+    
+    branches_list = []
+    for cb in cb_mappings:
+        branch = db.query(Branch).filter(Branch.code == cb.branch_code).first()
+        seats = db.query(CommunitySeat).filter(
+            and_(
+                CommunitySeat.college_code == college_code,
+                CommunitySeat.branch_code == cb.branch_code
+            )
+        ).first()
+        
+        seats_dict = {}
+        if seats:
+            seats_dict = {
+                "oc": seats.oc,
+                "bc": seats.bc,
+                "bcm": seats.bcm,
+                "mbc": seats.mbc,
+                "sc": seats.sc,
+                "sca": seats.sca,
+                "st": seats.st,
+                "total": seats.total
+            }
+            
+        # Protect highly detailed community seat allocations behind premium
+        if not current_user.subscription_active and seats_dict:
+            # Mask detailed sub-communities for free users, returning only totals
+            seats_dict = {
+                "oc": -1, "bc": -1, "bcm": -1, "mbc": -1, "sc": -1, "sca": -1, "st": -1,
+                "total": seats.total
+            }
+            
+        branches_list.append({
+            "code": cb.branch_code,
+            "name": branch.name if branch else "Unknown Branch",
+            "duration_years": branch.duration_years if branch else 4,
+            "approved_intake": cb.approved_intake,
+            "year_starting": cb.year_starting,
+            "nba_accredited": cb.nba_accredited,
+            "seats": seats_dict
+        })
+        
+    # Retrieve cutoff trends
+    cutoffs = db.query(CutoffData).filter(
+        CutoffData.college_code == college_code
+    ).order_by(CutoffData.year.desc()).all()
+    
+    trends_dict: Dict[str, List[CutoffTrend]] = {}
+    for cut in cutoffs:
+        if cut.branch_code not in trends_dict:
+            trends_dict[cut.branch_code] = []
+            
+        # Include community cutoffs based on user community preference
+        trends_dict[cut.branch_code].append(CutoffTrend(
+            year=cut.year,
+            cutoff_mark=cut.cutoff_mark,
+            cutoff_rank=cut.cutoff_rank,
+            seats_allotted=cut.seats_allotted
+        ))
+        
+    # Cap detailed trends to 3 items per branch for free tier
+    if not current_user.subscription_active:
+        for b_code in trends_dict:
+            trends_dict[b_code] = trends_dict[b_code][:2]
+
+    nearest_tfc = None
+    home_district = current_user.workspace.settings.default_district if current_user.workspace and current_user.workspace.settings else college.district
+    tfc = db.query(TFCLocation).filter(TFCLocation.district == home_district).first() or db.query(TFCLocation).first()
+    if tfc:
+        nearest_tfc = {
+            "centre_name": tfc.centre_name,
+            "district": tfc.district,
+            "address": tfc.address,
+            "phone": tfc.phone,
+        }
+            
+    return CollegeDetailResponse(
+        code=college.code,
+        name=college.name,
+        district=college.district,
+        type=college.type,
+        address=college.address,
+        latitude=college.latitude,
+        longitude=college.longitude,
+        hostel_available=college.hostel_available,
+        transport_available=college.transport_available,
+        website=college.website,
+        is_autonomous=college.is_autonomous,
+        nba_accredited=college.nba_accredited,
+        fee_structure_annual=college.fee_structure_annual,
+        placement_rate_pct=college.placement_rate_pct,
+        avg_package_lpa=college.avg_package_lpa,
+        nearest_railway_station=college.nearest_railway_station,
+        nearest_railway_distance_km=college.nearest_railway_distance_km,
+        nearest_tfc=nearest_tfc,
+        branches=branches_list,
+        cutoff_trends=trends_dict
+    )
