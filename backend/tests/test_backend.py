@@ -1,6 +1,5 @@
 from backend.routes.compare import build_structural_explanation
-from backend.routes.guidance import MIN_ELIGIBLE_AGGREGATE, build_ai_guidance, compute_aggregate
-from backend.routes.rounds import build_round_phase, build_tfc_guidance_message
+from backend.routes.guidance import MIN_ELIGIBLE_AGGREGATE, compute_aggregate
 from backend.schemas import CollegeCompareColumn
 
 
@@ -46,26 +45,3 @@ def test_structural_explanation_uses_top_two_differences():
     assert "district fit" in explanation
     assert "tie-breakers" in explanation
 
-
-def test_ai_guidance_falls_back_to_deterministic_strategy_without_provider():
-    response = build_ai_guidance(
-        marks_total=194.5,
-        community="OC",
-        district="Chennai",
-        preferred_branches=["CS", "IT"],
-        provider_enabled=False,
-    )
-
-    assert response["ai_available"] is False
-    assert "CS, IT" in response["strategy_note"]
-    assert "data-only" in response["strategy_note"].lower()
-
-
-def test_round_phase_and_tfc_guidance_cover_current_year_flow():
-    phase = build_round_phase(seconds_remaining=3600, active_phase="confirmation")
-    message = build_tfc_guidance_message("Accept_and_Upward", "Chennai")
-
-    assert phase["label"] == "Confirmation window"
-    assert phase["urgent"] is True
-    assert "TFC" in message
-    assert "Chennai" in message

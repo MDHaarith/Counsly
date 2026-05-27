@@ -5,12 +5,9 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.config import settings
 from backend.models import Branch, College, CollegeCompareHistory, CutoffData, User, WorkspaceActivity
 from backend.routes.auth import get_current_user
 from backend.schemas import (
-    AICompareRequest,
-    AICompareResponse,
     CollegeCompareColumn,
     CompareRequest,
     CompareResponse,
@@ -44,28 +41,6 @@ def build_structural_explanation(c1: CollegeCompareColumn, c2: CollegeCompareCol
         f"{c1.name} and {c2.name} are close on the visible metrics, so review cutoff history, fees, "
         "and location fit before finalizing the order."
     )
-
-
-def build_ai_compare_reasoning(colleges: list[str], metrics: list[str], provider_enabled: bool) -> dict:
-    named = " versus ".join(colleges[:4]) if colleges else "selected colleges"
-    metric_text = ", ".join(metrics) if metrics else "fees, cutoffs, branch fit, distance, and facilities"
-    if provider_enabled:
-        return {
-            "ai_available": True,
-            "headline": "AI compare reasoning",
-            "reasoning": (
-                f"AI reasoning for {named}: weigh {metric_text}, then keep the lower-risk branch higher unless "
-                "the student's preferred branch or travel constraint clearly dominates."
-            ),
-        }
-    return {
-        "ai_available": False,
-        "headline": "No AI reasoning available",
-        "reasoning": (
-            f"No AI reasoning is configured. Use the data-only comparison for {named}: review {metric_text}, "
-            "then choose the row with the best defensible trade-off."
-        ),
-    }
 
 
 @router.post("/", response_model=CompareResponse)
@@ -151,16 +126,6 @@ async def compare_colleges(req: CompareRequest, current_user: User = Depends(get
         colleges=columns,
         explanation=build_structural_explanation(c1, c2, differences[:2]),
     )
-
-
-@router.post("/ai", response_model=AICompareResponse)
-def ai_compare_reasoning(req: AICompareRequest, current_user: User = Depends(get_current_user)):
-    response = build_ai_compare_reasoning(
-        colleges=req.colleges,
-        metrics=req.metrics,
-        provider_enabled=settings.AI_PROVIDER_CONFIGURED,
-    )
-    return AICompareResponse(**response)
 
 
 @router.get("/sessions", response_model=List[CompareSessionResponse])

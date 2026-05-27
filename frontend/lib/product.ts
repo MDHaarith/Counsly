@@ -38,7 +38,7 @@ export const branches = [
 
 export const collegeCatalog: CollegeSummary[] = [
   {
-    code: "0001",
+    code: "1",
     name: "College of Engineering, Guindy",
     district: "Chennai",
     type: "Government",
@@ -82,7 +82,7 @@ export const collegeCatalog: CollegeSummary[] = [
     fitBand: "Safe",
   },
   {
-    code: "0004",
+    code: "4",
     name: "Madras Institute of Technology",
     district: "Chennai",
     type: "Government",
@@ -206,4 +206,25 @@ export function toneForBand(band: FitBand) {
   if (band === "Safe") return "safe";
   if (band === "Moderate") return "warning";
   return "coral";
+}
+
+export function cleanCollegeName(name: string): string {
+  if (!name) return name;
+  if (name.includes("University Departments of Anna University, Chennai - ")) {
+    const parts = name.split(" - ");
+    const campus = parts[1].split(",")[0];
+    return `Anna University - ${campus}`;
+  }
+  if (name.includes("University College of Engineering,")) {
+    const parts = name.split(",");
+    const city = parts[1].trim();
+    return `University College of Engineering, ${city}`;
+  }
+  const parts = name.split(",");
+  const first = parts[0].trim();
+  const lower = first.toLowerCase();
+  if (lower.includes("college") || lower.includes("institute") || lower.includes("university") || lower.includes("academy") || lower.includes("school")) {
+    return first;
+  }
+  return name;
 }

@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, BookmarkPlus, GitCompareArrows, Search } from "lucide-react";
 
 import { useApp } from "@/app/AppContext";
-import { Badge, PageHeader, PremiumBoard, Surface } from "@/components/ui";
+import { Badge, PageHeader, Surface } from "@/components/ui";
 import { choiceWriteDestination } from "@/lib/access.mjs";
 import { addChoice, searchColleges } from "@/lib/api.mjs";
 import { trackFunnelEvent } from "@/lib/analytics.mjs";
-import { branches, collegeCatalog, currency, districts, toneForBand } from "@/lib/product";
+import { branches, collegeCatalog, currency, districts, toneForBand, cleanCollegeName } from "@/lib/product";
 
 export default function RecommendationsPage() {
   const { user } = useApp();
@@ -33,7 +33,7 @@ export default function RecommendationsPage() {
       });
       window.localStorage.setItem("counsly_recommendations_viewed", "true");
     }
-    searchColleges({ branch_code: branch || undefined, district: district || undefined, limit: user?.subscription_active ? 50 : 3, search: query || undefined })
+    searchColleges({ branch_code: branch || undefined, district: district || undefined, limit: 50, search: query || undefined })
       .then((results) => {
         setRows(results.length ? results : collegeCatalog);
         setStatus(results.length ? "Recommendations are fit-ranked by the live explorer search." : "No live fit rows matched. Showing preview targets.");
@@ -42,9 +42,9 @@ export default function RecommendationsPage() {
         setRows(collegeCatalog);
         setStatus("API recommendations are unavailable. Preview fit rows remain actionable.");
       });
-  }, [branch, district, query, user?.subscription_active]);
+  }, [branch, district, query]);
 
-  const visible = user?.subscription_active ? rows : rows.slice(0, 3);
+  const visible = rows;
 
   return (
     <div className="space-y-6">
@@ -88,7 +88,7 @@ export default function RecommendationsPage() {
                 <span className="font-mono text-sm text-counsly-muted">Fit {college.fitScore}</span>
               </div>
               <div>
-                <h2 className="font-display text-3xl text-counsly-ink">{college.name}</h2>
+                <h2 className="font-display text-3xl text-counsly-ink">{cleanCollegeName(college.name)}</h2>
                 <p className="mt-2 text-sm leading-6 text-counsly-body">{college.branchName} in {college.district}</p>
               </div>
               <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -104,11 +104,11 @@ export default function RecommendationsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Link className="button-primary flex-1" href={`/explore/${college.code}`}>Inspect <ArrowRight className="h-4 w-4" /></Link>
-              <Link aria-label={`Compare ${college.name}`} className="button-secondary px-3" href={`/compare?focus=${college.code}&branches=${college.branchCode}`}>
+              <Link aria-label={`Compare ${cleanCollegeName(college.name)}`} className="button-secondary px-3" href={`/compare?focus=${college.code}&branches=${college.branchCode}`}>
                 <GitCompareArrows className="h-4 w-4" />
               </Link>
               <button
-                aria-label={`Add ${college.name} to choices`}
+                aria-label={`Add ${cleanCollegeName(college.name)} to choices`}
                 className="button-secondary px-3"
                 onClick={async () => {
                   const destination = choiceWriteDestination(user, "recommendations");
@@ -138,9 +138,6 @@ export default function RecommendationsPage() {
         ))}
       </div>
 
-      {!user?.subscription_active && (
-        <PremiumBoard body="Free guidance shows the first three targets. Full Access opens the complete fit list and all filters." title={`Showing 3 of ${rows.length} recommendations`} />
-      )}
     </div>
   );
 }

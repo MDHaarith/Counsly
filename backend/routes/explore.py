@@ -118,14 +118,6 @@ def get_college_details(college_code: str, current_user: User = Depends(get_curr
                 "total": seats.total
             }
             
-        # Protect highly detailed community seat allocations behind premium
-        if not current_user.subscription_active and seats_dict:
-            # Mask detailed sub-communities for free users, returning only totals
-            seats_dict = {
-                "oc": -1, "bc": -1, "bcm": -1, "mbc": -1, "sc": -1, "sca": -1, "st": -1,
-                "total": seats.total
-            }
-            
         branches_list.append({
             "code": cb.branch_code,
             "name": branch.name if branch else "Unknown Branch",
@@ -154,11 +146,6 @@ def get_college_details(college_code: str, current_user: User = Depends(get_curr
             seats_allotted=cut.seats_allotted
         ))
         
-    # Cap detailed trends to 3 items per branch for free tier
-    if not current_user.subscription_active:
-        for b_code in trends_dict:
-            trends_dict[b_code] = trends_dict[b_code][:2]
-
     nearest_tfc = None
     home_district = current_user.workspace.settings.default_district if current_user.workspace and current_user.workspace.settings else college.district
     tfc = db.query(TFCLocation).filter(TFCLocation.district == home_district).first() or db.query(TFCLocation).first()
@@ -187,8 +174,11 @@ def get_college_details(college_code: str, current_user: User = Depends(get_curr
         placement_rate_pct=college.placement_rate_pct,
         avg_package_lpa=college.avg_package_lpa,
         nearest_railway_station=college.nearest_railway_station,
+        nearest_railway_station_latitude=college.nearest_railway_station_latitude,
+        nearest_railway_station_longitude=college.nearest_railway_station_longitude,
         nearest_railway_distance_km=college.nearest_railway_distance_km,
         nearest_tfc=nearest_tfc,
         branches=branches_list,
-        cutoff_trends=trends_dict
+        cutoff_trends=trends_dict,
+        details_raw=college.details_raw
     )

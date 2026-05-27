@@ -1,4 +1,4 @@
-from backend.routes.logging import build_client_error_log
+from backend.routes.client_logging import build_client_error_log
 
 
 def test_build_client_error_log_preserves_fr115_fields():

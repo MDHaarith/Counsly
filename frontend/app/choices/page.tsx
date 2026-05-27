@@ -34,7 +34,7 @@ import {
   uploadChoiceCsv,
 } from "@/lib/api.mjs";
 import { buildChoiceExportModel, choiceExportFilename } from "@/lib/choice-export.mjs";
-import { ChoiceDraft, FitBand, choiceDrafts, toneForBand } from "@/lib/product";
+import { ChoiceDraft, FitBand, choiceDrafts, toneForBand, cleanCollegeName } from "@/lib/product";
 
 type ChoiceRow = ChoiceDraft & { backendId?: number; id: string; manual: boolean };
 type SnapshotRecord = { id?: string; itemCount?: number; rows?: ChoiceRow[]; title: string };
@@ -75,7 +75,7 @@ function ChoiceItem({
     >
       <div className="grid gap-4 lg:grid-cols-[44px_minmax(0,1fr)_170px_220px]">
         <button
-          aria-label={`Reorder ${choice.name}`}
+          aria-label={`Reorder ${cleanCollegeName(choice.name)}`}
           className="hidden h-11 w-11 cursor-grab items-center justify-center rounded-lg border border-counsly-line text-counsly-muted lg:flex"
           type="button"
           {...sortable.attributes}
@@ -91,7 +91,7 @@ function ChoiceItem({
             {choice.manual && <Badge tone="warning">Manually set</Badge>}
           </div>
           <div>
-            <h2 className="text-base font-semibold text-counsly-ink">{choice.name}</h2>
+            <h2 className="text-base font-semibold text-counsly-ink">{cleanCollegeName(choice.name)}</h2>
             <p className="text-sm leading-6 text-counsly-body">
               {choice.branchName} ({choice.branchCode})
             </p>
@@ -415,15 +415,15 @@ export default function ChoicesPage() {
         </Surface>
 
         <div className="space-y-4">
-          <Surface className="space-y-4 p-5" tone="dark">
-            <Badge tone="dark">Active row</Badge>
+          <Surface className="space-y-4 p-5" tone="soft">
+            <Badge tone="neutral">Active row</Badge>
             {activeChoice ? (
               <>
-                <h2 className="font-display text-3xl text-white">{activeChoice.name}</h2>
-                <p className="text-sm leading-6 text-counsly-card">{activeChoice.notes}</p>
+                <h2 className="font-display text-3xl text-counsly-ink">{cleanCollegeName(activeChoice.name)}</h2>
+                <p className="text-sm leading-6 text-counsly-body">{activeChoice.notes}</p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <span className="rounded-lg bg-counsly-slate p-3">Cutoff <strong className="block font-mono">{activeChoice.cutoff}</strong></span>
-                  <span className="rounded-lg bg-counsly-slate p-3">Seats <strong className="block font-mono">{activeChoice.seats}</strong></span>
+                  <span className="rounded-lg bg-counsly-canvas p-3 text-counsly-muted">Cutoff <strong className="block font-mono text-counsly-ink mt-1 text-lg">{activeChoice.cutoff}</strong></span>
+                  <span className="rounded-lg bg-counsly-canvas p-3 text-counsly-muted">Seats <strong className="block font-mono text-counsly-ink mt-1 text-lg">{activeChoice.seats}</strong></span>
                 </div>
               </>
             ) : null}

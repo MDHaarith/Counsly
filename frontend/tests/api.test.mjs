@@ -6,10 +6,8 @@ import {
   buildChoiceRow,
   buildCompareSession,
   buildExploreCollege,
-  buildOperationalStatus,
   buildRequestInit,
   buildWorkspaceSettings,
-  toDecisionType,
 } from "../lib/api.mjs";
 
 test("buildChoiceRow maps backend choice metadata into filing rows", () => {
@@ -135,17 +133,4 @@ test("buildWorkspaceSettings normalizes backend defaults for profile forms", () 
   assert.deepEqual(settings.preferredBranches, ["CS", "IT"]);
   assert.equal(settings.compactView, true);
   assert.equal(settings.mobileDensity, "compact");
-});
-
-test("buildOperationalStatus maps admin and scraping state without news", () => {
-  const status = buildOperationalStatus({
-    admin_updates: [{ dataset: "cutoff_data", status: "needs_review" }],
-    scraping_jobs: [{ dataset: "seat_matrix", status: "success" }],
-    ai: { configured: false },
-  });
-
-  assert.equal(status.adminUpdates[0].dataset, "cutoff_data");
-  assert.equal(status.scrapingJobs[0].dataset, "seat_matrix");
-  assert.equal(status.ai.configured, false);
-  assert.equal(Object.keys(status).includes("news"), false);
 });

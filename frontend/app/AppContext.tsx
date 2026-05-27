@@ -10,8 +10,6 @@ export interface UserProfile {
   id: string;
   name: string;
   google_email: string;
-  subscription_active: boolean;
-  subscription_expiry?: string;
   welcome_message_sent: boolean;
   roll_number?: string;
   roll_number_verified: boolean;
@@ -24,7 +22,6 @@ export interface PhaseContextType {
   login: (email: string, name: string, googleIdToken?: string) => Promise<UserProfile>;
   logout: () => void;
   refreshUser: () => void;
-  setSubscriptionActive: (active: boolean) => void;
   setWorkspaceOnboardingStep: (step: string) => void;
 }
 
@@ -104,14 +101,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setSubscriptionActive = (active: boolean) => {
-    if (user) {
-      const updated = { ...user, subscription_active: active };
-      setUser(updated);
-      writeStoredUser(updated);
-    }
-  };
-
   const setWorkspaceOnboardingStep = (step: string) => {
     if (user) {
       const updated = { ...user, workspace_onboarding_step: step };
@@ -127,7 +116,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       refreshUser,
-      setSubscriptionActive,
       setWorkspaceOnboardingStep
     }}>
       {children}

@@ -100,7 +100,7 @@ export function LoginCard({ compact = false }: { compact?: boolean }) {
         <div className="space-y-2">
           <h2 className="font-display text-3xl leading-tight text-counsly-ink">Continue your counselling workspace</h2>
           <p className="text-sm leading-6 text-counsly-muted">
-            Enter your name and Google email to pick up your shortlists, snapshots, and round tracker — no password needed.
+            Enter your name and Google email to pick up your shortlists, snapshots, and compare sessions — no password needed.
           </p>
         </div>
 

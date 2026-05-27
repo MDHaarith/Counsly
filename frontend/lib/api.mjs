@@ -14,6 +14,27 @@ function fitBandForScore(score) {
   return "Ambitious";
 }
 
+export function cleanCollegeName(name) {
+  if (!name) return name;
+  if (name.includes("University Departments of Anna University, Chennai - ")) {
+    const parts = name.split(" - ");
+    const campus = parts[1].split(",")[0];
+    return `Anna University - ${campus}`;
+  }
+  if (name.includes("University College of Engineering,")) {
+    const parts = name.split(",");
+    const city = parts[1].trim();
+    return `University College of Engineering, ${city}`;
+  }
+  const parts = name.split(",");
+  const first = parts[0].trim();
+  const lower = first.toLowerCase();
+  if (lower.includes("college") || lower.includes("institute") || lower.includes("university") || lower.includes("academy") || lower.includes("school")) {
+    return first;
+  }
+  return name;
+}
+
 export function apiUrl(path) {
   return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
@@ -110,7 +131,7 @@ export function buildChoiceRow(choice) {
     id: `choice-${choice.id}`,
     backendId: choice.id,
     code: choice.college_code,
-    name: choice.college_name,
+    name: cleanCollegeName(choice.college_name),
     district: choice.district || "District pending",
     type: choice.type || "Self-Finance",
     branchCode: choice.branch_code,
@@ -138,7 +159,7 @@ export function buildChoiceRow(choice) {
 export function buildExploreCollege(college, branch = fallbackBranch) {
   return {
     code: college.code,
-    name: college.name,
+    name: cleanCollegeName(college.name),
     district: college.district,
     type: college.type,
     branchCode: branch.code,
@@ -154,6 +175,8 @@ export function buildExploreCollege(college, branch = fallbackBranch) {
     placementRate: college.placement_rate_pct || 0,
     averagePackage: college.avg_package_lpa || 0,
     railway: college.nearest_railway_station || "Rail context pending",
+    railwayLatitude: college.nearest_railway_station_latitude,
+    railwayLongitude: college.nearest_railway_station_longitude,
     distanceKm: college.nearest_railway_distance_km || 0,
     fitScore: college.fit_score || 0,
     fitBand: fitBandForScore(college.fit_score || 0),
@@ -183,6 +206,7 @@ export function buildCollegeDetail(detail) {
     branches: detail.branches || [],
     cutoffTrends: detail.cutoff_trends || {},
     nearestTfc: detail.nearest_tfc || null,
+    detailsRaw: detail.details_raw || null,
   };
 }
 
@@ -208,14 +232,6 @@ export function buildWorkspaceSettings(settings = {}) {
     compactView: Boolean(settings.compact_view),
     mobileDensity: settings.mobile_density || "default",
     themeMode: settings.theme_mode || "mild",
-  };
-}
-
-export function buildOperationalStatus(payload = {}) {
-  return {
-    adminUpdates: payload.admin_updates || [],
-    scrapingJobs: payload.scraping_jobs || [],
-    ai: payload.ai || { configured: false },
   };
 }
 
@@ -315,57 +331,6 @@ export function runOnboarding(payload) {
   return apiRequest("/guidance/onboarding", { body: payload, method: "POST" });
 }
 
-export function toDecisionType(label = "") {
-  return String(label).trim().replace(/\s+/g, "_");
-}
-
-export function fetchRoundStatus() {
-  return apiRequest("/rounds/status");
-}
-
-export function confirmRoundDecision(decisionType) {
-  return apiRequest("/rounds/confirm", {
-    body: { decision_type: toDecisionType(decisionType) },
-    method: "POST",
-  });
-}
-
-export function fetchAiGuidance(payload = {}) {
-  return apiRequest("/guidance/ai", {
-    body: payload,
-    method: "POST",
-  });
-}
-
-export function fetchAiCompareReasoning(payload = {}) {
-  return apiRequest("/compare/ai", {
-    body: payload,
-    method: "POST",
-  });
-}
-
-export async function fetchOperationalStatus() {
-  return buildOperationalStatus(await apiRequest("/admin/status"));
-}
-
-export async function createAdminUpdate(payload) {
-  return apiRequest("/admin/updates", {
-    body: payload,
-    method: "POST",
-  });
-}
-
-export async function fetchScrapingJobs() {
-  return apiRequest("/scraping/jobs");
-}
-
-export async function createScrapingJob(payload) {
-  return apiRequest("/scraping/jobs", {
-    body: payload,
-    method: "POST",
-  });
-}
-
 export async function fetchWorkspaceSettings() {
   return buildWorkspaceSettings(await apiRequest("/workspace/settings"));
 }
@@ -383,85 +348,6 @@ export async function updateWorkspaceSettings(settings) {
   }));
 }
 
-export function createPaymentOrder(source = "") {
-  return apiRequest("/payments/order", {
-    body: { source },
-    method: "POST",
-  });
-}
-
-export function verifyPayment(payload) {
-  return apiRequest("/payments/verify", {
-    body: payload,
-    method: "POST",
-  });
-}
-
-// ── Dataset API helpers ──────────────────────────────────────────
-
-export function fetchDatasetOverview() {
-  return apiRequest("/dataset/overview");
-}
-
-export function fetchFees(params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return apiRequest(`/dataset/fees${qs ? `?${qs}` : ""}`);
-}
-
-export function fetchTransport(params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return apiRequest(`/dataset/transport${qs ? `?${qs}` : ""}`);
-}
-
-export function fetchDistrictState() {
-  return apiRequest("/dataset/district-state");
-}
-
-export function fetchMaster(params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return apiRequest(`/dataset/master${qs ? `?${qs}` : ""}`);
-}
-
-export function fetchDistribution() {
-  return apiRequest("/dataset/distribution");
-}
-
-export function fetchCreditHours() {
-  return apiRequest("/dataset/credit-hours");
-}
-
-// ── Financials API helpers ───────────────────────────────────────
-
-export function fetchRevenue() {
-  return apiRequest("/financials/revenue");
-}
-
-export function fetchExpenditure() {
-  return apiRequest("/financials/expenditure");
-}
-
-export function fetchAid() {
-  return apiRequest("/financials/aid");
-}
-
-export function fetchFinancialMetrics() {
-  return apiRequest("/financials/metrics");
-}
-
-// ── Trends API helpers ───────────────────────────────────────────
-
-export function fetchCommunityView() {
-  return apiRequest("/trends/community-view");
-}
-
-export function fetchCreditHourTrends() {
-  return apiRequest("/trends/credit-hours");
-}
-
-export function fetchBranchState() {
-  return apiRequest("/trends/branch-state");
-}
-
 // ── Maps API helpers ─────────────────────────────────────────────
 
 export function fetchMapColleges(params = {}) {
@@ -472,27 +358,4 @@ export function fetchMapColleges(params = {}) {
 export function fetchTfcLocations(params = {}) {
   const qs = new URLSearchParams(params).toString();
   return apiRequest(`/maps/tfc-locations${qs ? `?${qs}` : ""}`);
-}
-
-// ── Notifications API helpers ────────────────────────────────────
-
-export function fetchNotifications() {
-  return apiRequest("/notifications/");
-}
-
-export function fetchUnreadCount() {
-  return apiRequest("/notifications/unread-count");
-}
-
-export function dismissNotification(id) {
-  return apiRequest(`/notifications/${encodeURIComponent(id)}/dismiss`, { method: "POST" });
-}
-
-// ── Reporting API helpers ────────────────────────────────────────
-
-export function generateReport(reportType) {
-  return apiRequest("/reporting/generate", {
-    body: { report_type: reportType },
-    method: "POST",
-  });
 }

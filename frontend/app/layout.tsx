@@ -11,9 +11,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <title>Counsly 2027 — TNEA Counseling Workspace</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta name="description" content="Algorithmic TNEA counseling workspace grounded in official guidance, cutoff evidence, and deterministic compare flows." />
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        />
       </head>
       <body>
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+        <Script
+          src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          strategy="afterInteractive"
+        />
         <AppProvider>
           <AppShell>{children}</AppShell>
         </AppProvider>

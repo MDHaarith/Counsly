@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { LockKeyhole } from "lucide-react";
+
 
 export function PageHeader({
   eyebrow,
@@ -39,12 +39,14 @@ export function Surface({
 
 export function Badge({
   children,
+  className = "",
   tone = "neutral",
 }: {
   children: ReactNode;
+  className?: string;
   tone?: "neutral" | "coral" | "safe" | "warning" | "dark";
 }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+  return <span className={`badge badge-${tone} ${className}`}>{children}</span>;
 }
 
 export function Metric({
@@ -65,24 +67,3 @@ export function Metric({
   );
 }
 
-export function PremiumBoard({
-  title,
-  body,
-}: {
-  title: string;
-  body: string;
-}) {
-  return (
-    <Surface className="relative overflow-hidden p-5" tone="soft">
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-counsly-coral/10 text-counsly-coral">
-          <LockKeyhole className="h-4 w-4" />
-        </span>
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-counsly-ink">{title}</h3>
-          <p className="text-sm leading-6 text-counsly-muted">{body}</p>
-        </div>
-      </div>
-    </Surface>
-  );
-}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bookmark, FileStack, Radar, TimerReset } from "lucide-react";
+import { ArrowRight, Bookmark, FileStack, MapPin, SlidersHorizontal } from "lucide-react";
 
 import { LoginCard } from "@/components/login-card";
 import { Badge, Surface } from "@/components/ui";
@@ -16,14 +16,14 @@ const features = [
     body: "Data-ranked college explorer, branch insight with cutoff trends, and side-by-side compares without fake certainty or AI guesswork.",
   },
   {
-    icon: Radar,
-    title: "Complete dataset",
-    body: "Fees, transport, district data, seat distribution, credit hours, financial metrics, and community cutoff history — all in one surface.",
+    icon: SlidersHorizontal,
+    title: "Profile-tuned workflow",
+    body: "Use marks, preferred branches, district context, and official cutoff history to keep the workspace grounded in your actual constraints.",
   },
   {
-    icon: TimerReset,
-    title: "Round control",
-    body: "See deadlines, confirmation consequences, TFC requirements, and reporting checklists before the window locks.",
+    icon: MapPin,
+    title: "Travel context",
+    body: "Check college locations, railway context, TFC centres, and route links while comparing practical trade-offs.",
   },
 ];
 
@@ -42,11 +42,7 @@ export default function Home() {
       </nav>
 
       {/* Hero section */}
-      <section className="relative overflow-hidden rounded-3xl border border-counsly-line bg-gradient-to-br from-counsly-soft via-counsly-canvas to-counsly-soft px-6 py-10 md:px-10 md:py-16">
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute -right-32 -top-32 h-[400px] w-[400px] rounded-full bg-counsly-coral/[0.08] blur-[100px]" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-[300px] w-[300px] rounded-full bg-counsly-teal/[0.06] blur-[100px]" />
-
+      <section className="relative overflow-hidden rounded-3xl border border-counsly-line bg-counsly-soft px-6 py-10 md:px-10 md:py-16">
         <div className="relative grid items-start gap-10 lg:grid-cols-[1.1fr_430px]">
           <div className="space-y-8">
             <Badge tone="coral">TNEA 2027 counselling workspace</Badge>
@@ -67,18 +63,18 @@ export default function Home() {
                 Preview college explorer
               </Link>
             </div>
-            <Surface className="grid gap-4 p-5 sm:grid-cols-3" tone="dark">
+            <Surface className="grid gap-4 p-5 sm:grid-cols-3" tone="soft">
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.12em] text-counsly-card">Community cutoffs</p>
-                <p className="font-mono text-2xl text-white">2020–2026</p>
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-counsly-muted">Community cutoffs</p>
+                <p className="font-mono text-2xl text-counsly-ink">2020–2026</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.12em] text-counsly-card">Colleges indexed</p>
-                <p className="font-mono text-2xl text-white">500+</p>
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-counsly-muted">Colleges indexed</p>
+                <p className="font-mono text-2xl text-counsly-ink">500+</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.12em] text-counsly-card">Data-driven</p>
-                <p className="font-mono text-2xl text-white">No AI guesswork</p>
+                <p className="text-xs font-medium uppercase tracking-[0.12em] text-counsly-muted">Data-driven</p>
+                <p className="font-mono text-2xl text-counsly-ink">No AI guesswork</p>
               </div>
             </Surface>
           </div>

@@ -1,7 +1,7 @@
 import httpx
 import jwt
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from backend.database import get_db
 from backend.models import User, Workspace, WorkspaceSettings, WorkspaceActivity, DeviceFingerprint
 from backend.schemas import SessionRequest, UserProfile
 from backend.config import settings
+from backend.routes.rate_limiter import rate_limit
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -22,7 +23,7 @@ class RegisterRequest(BaseModel):
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=30)
+    expire = datetime.now(timezone.utc) + timedelta(days=30)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
@@ -80,7 +81,7 @@ async def get_current_user(request: Request, authorization: str = Header(None), 
                 if user:
                     return user
         except Exception:
-            pass
+            pass  # JWT decode failure — token invalid or expired, proceed unauthenticated
 
     if settings.ALLOW_DEV_AUTH_FALLBACK:
         if not user:
@@ -100,7 +101,7 @@ async def get_current_user(request: Request, authorization: str = Header(None), 
                         if email:
                             user = db.query(User).filter(User.google_email == email).first()
             except Exception:
-                pass
+                pass  # Request body JSON parse failure — non-JSON request, proceed with empty body
 
         if not user and email:
             user_id = str(uuid.uuid4())
@@ -110,8 +111,8 @@ async def get_current_user(request: Request, authorization: str = Header(None), 
                 google_id=str(uuid.uuid4()),
                 google_email=email,
                 name=email.split("@")[0].title(),
-                created_at=datetime.utcnow(),
-                last_login=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                last_login=datetime.now(timezone.utc)
             )
             db.add(user)
             db.flush()
@@ -124,7 +125,7 @@ async def get_current_user(request: Request, authorization: str = Header(None), 
                 slug=f"ws-{user_id[:8]}",
                 onboarding_step="completed",
                 onboarding_completed=True,
-                onboarding_completed_at=datetime.utcnow()
+                onboarding_completed_at=datetime.now(timezone.utc)
             )
             db.add(workspace)
             db.flush()
@@ -143,7 +144,7 @@ async def get_current_user(request: Request, authorization: str = Header(None), 
                 workspace_id=workspace_id,
                 event_type="environment_initialized",
                 summary="strictly private personal data environment initialized successfully.",
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             db.add(activity)
             db.commit()
@@ -158,7 +159,7 @@ async def get_current_user(request: Request, authorization: str = Header(None), 
         detail="Authentication required.",
     )
 
-@router.post("/session")
+@router.post("/session", dependencies=[Depends(rate_limit(5, 60))])
 async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
     verified_payload = None
     if req.google_id_token:
@@ -184,8 +185,8 @@ async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
             google_email=resolved_email,
             name=resolved_name,
             device_fingerprint_hash=req.device_fingerprint_hash,
-            created_at=datetime.utcnow(),
-            last_login=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            last_login=datetime.now(timezone.utc)
         )
         db.add(user)
         db.flush()  # Lock user ID to resolve constraints
@@ -218,7 +219,7 @@ async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
             workspace_id=workspace_id,
             event_type="environment_initialized",
             summary="strictly private personal data environment initialized successfully.",
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         db.add(activity)
     else:
@@ -235,7 +236,7 @@ async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
                         detail="Device fingerprint limit exceeded. Account sharing is strictly restricted."
                     )
         
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         if req.device_fingerprint_hash and not user.device_fingerprint_hash:
             user.device_fingerprint_hash = req.device_fingerprint_hash
             
@@ -264,8 +265,6 @@ async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
             "id": user.id,
             "name": user.name,
             "google_email": user.google_email,
-            "subscription_active": user.subscription_active,
-            "subscription_expiry": user.subscription_expiry,
             "welcome_message_sent": user.welcome_message_sent,
             "roll_number": user.roll_number,
             "roll_number_verified": user.roll_number_verified,
@@ -277,7 +276,7 @@ async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
 def get_profile(current_user: User = Depends(get_current_user)):
     return current_user
 
-@router.post("/register")
+@router.post("/register", dependencies=[Depends(rate_limit(5, 60))])
 async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
     verified_payload = None
     if req.google_id_token:
@@ -303,8 +302,8 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
             google_email=resolved_email,
             name=resolved_name,
             device_fingerprint_hash=req.device_fingerprint_hash,
-            created_at=datetime.utcnow(),
-            last_login=datetime.utcnow()
+            created_at=datetime.now(timezone.utc),
+            last_login=datetime.now(timezone.utc)
         )
         db.add(user)
         db.flush()
@@ -318,7 +317,7 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
             slug=f"ws-{user_id[:8]}",
             onboarding_step="completed",
             onboarding_completed=True,
-            onboarding_completed_at=datetime.utcnow()
+            onboarding_completed_at=datetime.now(timezone.utc)
         )
         db.add(workspace)
         db.flush()
@@ -339,18 +338,18 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
             workspace_id=workspace_id,
             event_type="environment_initialized",
             summary="strictly private personal data environment initialized successfully.",
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         db.add(activity)
     else:
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         if req.device_fingerprint_hash and not user.device_fingerprint_hash:
             user.device_fingerprint_hash = req.device_fingerprint_hash
             
         if user.workspace:
             user.workspace.onboarding_step = "completed"
             user.workspace.onboarding_completed = True
-            user.workspace.onboarding_completed_at = datetime.utcnow()
+            user.workspace.onboarding_completed_at = datetime.now(timezone.utc)
         else:
             workspace_id = str(uuid.uuid4())
             workspace = Workspace(
@@ -360,7 +359,7 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
                 slug=f"ws-{user.id[:8]}",
                 onboarding_step="completed",
                 onboarding_completed=True,
-                onboarding_completed_at=datetime.utcnow()
+                onboarding_completed_at=datetime.now(timezone.utc)
             )
             db.add(workspace)
             db.flush()
@@ -388,8 +387,6 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
             "id": user.id,
             "name": user.name,
             "google_email": user.google_email,
-            "subscription_active": user.subscription_active,
-            "subscription_expiry": user.subscription_expiry,
             "welcome_message_sent": user.welcome_message_sent,
             "roll_number": user.roll_number,
             "roll_number_verified": user.roll_number_verified,

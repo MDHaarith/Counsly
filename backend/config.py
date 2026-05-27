@@ -10,18 +10,10 @@ def _parse_bool(value: str | None, default: bool) -> bool:
 
 class Settings:
     DEFAULT_JWT_SECRET = "super-secret-jwt-signing-key-for-tnea-counsly"
-    DEFAULT_RAZORPAY_KEY_ID = "rzp_test_mock_id"
-    DEFAULT_RAZORPAY_KEY_SECRET = "mock_secret"
 
     def __init__(self) -> None:
         self.APP_ENV = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "production")).strip().lower()
         self.GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID", None)
-        self.RAZORPAY_KEY_ID: str = os.getenv("RAZORPAY_KEY_ID", self.DEFAULT_RAZORPAY_KEY_ID)
-        self.RAZORPAY_KEY_SECRET: str = os.getenv("RAZORPAY_KEY_SECRET", self.DEFAULT_RAZORPAY_KEY_SECRET)
-        self.AI_PROVIDER_API_KEY: Optional[str] = os.getenv(
-            "AI_PROVIDER_API_KEY",
-            os.getenv("OPENROUTER_API_KEY", None),
-        )
         self.SEASON_END_DATE: str = os.getenv("SEASON_END_DATE", "2027-09-30")
         self.JWT_SECRET: str = os.getenv("JWT_SECRET", self.DEFAULT_JWT_SECRET)
         self.JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
@@ -53,6 +45,16 @@ class Settings:
         return [
             "http://localhost:3000",
             "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+            "http://localhost:3002",
+            "http://127.0.0.1:3002",
+            "http://localhost:3003",
+            "http://127.0.0.1:3003",
+            "http://localhost:3004",
+            "http://127.0.0.1:3004",
+            "http://localhost:3005",
+            "http://127.0.0.1:3005",
             "https://counsly.vercel.app",
         ]
 
@@ -63,14 +65,6 @@ class Settings:
     @property
     def ALLOW_DEV_AUTH_FALLBACK(self) -> bool:
         return _parse_bool(os.getenv("ALLOW_DEV_AUTH_FALLBACK"), default=self.is_development)
-
-    @property
-    def ALLOW_MOCK_PAYMENTS(self) -> bool:
-        return _parse_bool(os.getenv("ALLOW_MOCK_PAYMENTS"), default=self.is_development)
-
-    @property
-    def AI_PROVIDER_CONFIGURED(self) -> bool:
-        return bool(self.AI_PROVIDER_API_KEY)
 
     def validate_runtime(self) -> None:
         errors: list[str] = []
@@ -84,13 +78,6 @@ class Settings:
                 errors.append("GOOGLE_CLIENT_ID must be set in production.")
             if self.ALLOW_DEV_AUTH_FALLBACK:
                 errors.append("ALLOW_DEV_AUTH_FALLBACK must be disabled in production.")
-            if self.ALLOW_MOCK_PAYMENTS:
-                errors.append("ALLOW_MOCK_PAYMENTS must be disabled in production.")
-            if (
-                self.RAZORPAY_KEY_ID == self.DEFAULT_RAZORPAY_KEY_ID
-                or self.RAZORPAY_KEY_SECRET == self.DEFAULT_RAZORPAY_KEY_SECRET
-            ):
-                errors.append("Real Razorpay credentials must be configured in production.")
 
         if errors:
             raise RuntimeError("Invalid runtime configuration: " + " ".join(errors))

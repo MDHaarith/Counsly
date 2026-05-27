@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, GitCompareArrows, MapPinned, TrainFront } from "lucide-react";
 
 import { useApp } from "@/app/AppContext";
-import { Badge, PageHeader, PremiumBoard, Surface } from "@/components/ui";
+import { Badge, PageHeader, Surface } from "@/components/ui";
 import { choiceWriteDestination } from "@/lib/access.mjs";
 import { addChoice, fetchCollegeDetail } from "@/lib/api.mjs";
 import { trackFunnelEvent } from "@/lib/analytics.mjs";
-import { currency, getCollege, trendRows } from "@/lib/product";
+import { currency, getCollege, trendRows, cleanCollegeName } from "@/lib/product";
 
 const tabs = ["Overview", "Cutoffs", "Fees & Facilities", "Placements", "Nearby"] as const;
 
@@ -22,6 +22,17 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
   const [tab, setTab] = useState<(typeof tabs)[number]>("Overview");
   const [status, setStatus] = useState("Loading live college detail and community-safe branch data.");
   const [choiceStatus, setChoiceStatus] = useState("");
+
+  const details = useMemo(() => {
+    if (college?.detailsRaw) {
+      try {
+        return JSON.parse(college.detailsRaw);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }, [college?.detailsRaw]);
 
   useEffect(() => {
     let active = true;
@@ -95,7 +106,7 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
         }
         description={`${college.branchName} decision page with live branches, cutoff evidence, facility context, and shortlist actions.`}
         eyebrow={`${college.type} college in ${college.district}`}
-        title={college.name}
+        title={cleanCollegeName(college.name)}
       />
 
       <p className="rounded-xl border border-counsly-line bg-counsly-canvas px-4 py-3 text-sm text-counsly-body">{choiceStatus || status}</p>
@@ -145,20 +156,49 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
                   </p>
                 </article>
               </div>
+
+              {details && (
+                <div className="grid gap-3 md:grid-cols-2 pt-2 border-t border-counsly-line">
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Administration & Location</p>
+                    <div className="mt-2 text-sm leading-6 text-counsly-body space-y-1.5">
+                      <p>Dean/Principal: <strong className="text-counsly-ink">{details.Dean_Principal || "N/A"}</strong></p>
+                      <p>Anti-Ragging Help: <strong className="text-counsly-ink">{details.Anti_Ragging_Phone_No || "N/A"}</strong></p>
+                      <p>Taluk / Region: <strong className="text-counsly-ink">{details.Taluk || "N/A"}</strong></p>
+                      {details.Distance_in_KMS_from_Dist_HQ && (
+                        <p>Distance from Dist HQ: <strong className="text-counsly-ink">{details.Distance_in_KMS_from_Dist_HQ} km</strong></p>
+                      )}
+                    </div>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Official Contacts & Banking</p>
+                    <div className="mt-2 text-sm leading-6 text-counsly-body space-y-1.5">
+                      <p>Email: <strong className="text-counsly-ink">{details["Email-ID"] || "N/A"}</strong></p>
+                      <p>Phone/Fax: <strong className="text-counsly-ink">{details.Phone_Fax || "N/A"}</strong></p>
+                      {details.Bank_Name && (
+                        <p>Bank: <strong className="text-counsly-ink">{details.Bank_Name} {details.Bank_A_c_No ? `(A/c: ${details.Bank_A_c_No})` : ""}</strong></p>
+                      )}
+                      {details.Pincode && (
+                        <p>Pincode: <strong className="text-counsly-ink">{details.Pincode}</strong></p>
+                      )}
+                    </div>
+                  </article>
+                </div>
+              )}
             </div>
           )}
 
           {tab === "Cutoffs" && (
             <div className="space-y-3">
               <h2 className="font-display text-3xl text-counsly-ink">Branch cutoff trend</h2>
-              {(cutoffRows.length ? cutoffRows : trendRows.slice(1)).map((row: any) => (
+              {(cutoffRows.length ? cutoffRows : trendRows.slice(1)).map((row: { year: number | string; cutoff_mark?: number; ambitious?: number }) => (
                 <div className="grid grid-cols-[70px_1fr_auto] items-center gap-3 rounded-lg bg-counsly-soft p-3" key={row.year}>
                   <span className="font-mono text-sm text-counsly-muted">{row.year}</span>
                   <span className="text-sm text-counsly-body">{college.branchCode} cutoff movement</span>
                   <strong className="font-mono text-counsly-ink">{row.cutoff_mark ?? row.ambitious}</strong>
                 </div>
               ))}
-              {(branches.length ? branches : [{ code: college.branchCode, name: college.branchName, approved_intake: college.seats }]).map((branch: any) => {
+              {(branches.length ? branches : [{ code: college.branchCode, name: college.branchName, approved_intake: college.seats }]).map((branch: { code: string; name: string; seats?: { total?: number }; approved_intake?: number }) => {
                 const trends = college.cutoffTrends?.[branch.code] ?? [];
                 const direction = trends.length > 1 && trends[0].cutoff_mark > trends[trends.length - 1].cutoff_mark ? "rising" : trends.length > 1 ? "stable" : "preview";
                 return (
@@ -205,29 +245,77 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
           {tab === "Fees & Facilities" && (
             <div className="grid gap-3 md:grid-cols-2">
               <article className="rounded-lg border border-counsly-line p-4">
-                <p className="eyebrow">Annual fees</p>
+                <p className="eyebrow">Annual tuition fees</p>
                 <p className="mt-2 font-mono text-xl text-counsly-ink">{college.fees ? currency(college.fees) : "Pending"}</p>
               </article>
-              <article className="rounded-lg border border-counsly-line p-4">
-                <p className="eyebrow">Hostel</p>
-                <p className="mt-2 text-sm leading-6 text-counsly-body">{college.hostel ? "Available" : "Not listed"}. Monthly cost and caution deposit show when source data is audited.</p>
-              </article>
-              <article className="rounded-lg border border-counsly-line p-4">
-                <p className="eyebrow">Transport</p>
-                <p className="mt-2 text-sm leading-6 text-counsly-body">{college.transport ? "Available" : "Not listed"} in the current data surface.</p>
-              </article>
-              <article className="rounded-lg border border-counsly-line p-4">
-                <p className="eyebrow">Establishment fees</p>
-                <p className="mt-2 text-sm leading-6 text-counsly-body">Pending verified source row.</p>
-              </article>
+              
+              {details ? (
+                <>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Boys Hostel Status</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">
+                      Accommodation: <strong className="text-counsly-ink">{details.Hostel_Boys_Permanent_or_Rental || "Not Available"}</strong>
+                      {details.Type_of_Mess && details.Type_of_Mess !== "-" && (
+                        <span><br/>Mess Food Type: <strong className="text-counsly-ink">{details.Type_of_Mess}</strong></span>
+                      )}
+                    </p>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Girls Hostel Status</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">
+                      Accommodation: <strong className="text-counsly-ink">{details.Hostel_Girls_Permanent_or_Rental || "Not Available"}</strong>
+                    </p>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Hostel Room Rent & Electricity</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">
+                      Room Rent: <strong className="text-counsly-ink">₹{details.Room_Rent ? Number(details.Room_Rent).toLocaleString() : 0} / year</strong><br/>
+                      Electricity: <strong className="text-counsly-ink">₹{details.Electricity_Charges ? Number(details.Electricity_Charges).toLocaleString() : 0} / year</strong>
+                    </p>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Hostel Caution Deposit</p>
+                    <p className="mt-2 font-mono text-xl text-counsly-ink">
+                      {details.Caution_Deposit ? `₹${Number(details.Caution_Deposit).toLocaleString()}` : "Pending"}
+                    </p>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Hostel Establishment & Admission</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">
+                      Establishment: <strong className="text-counsly-ink">₹{details.Establishment_Charges ? Number(details.Establishment_Charges).toLocaleString() : 0} / year</strong><br/>
+                      Admission Fees: <strong className="text-counsly-ink">₹{details.Admission_Fees ? Number(details.Admission_Fees).toLocaleString() : 0}</strong>
+                    </p>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Transport Facilities</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">
+                      Status: <strong className="text-counsly-ink">{details.Transport_Facilities === "no" ? "Not Available" : "✓ Available"}</strong>
+                    </p>
+                  </article>
+                </>
+              ) : (
+                <>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Hostel</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">{college.hostel ? "Available" : "Not listed"}. Monthly cost and caution deposit show when source data is audited.</p>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Transport</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">{college.transport ? "Available" : "Not listed"} in the current data surface.</p>
+                  </article>
+                  <article className="rounded-lg border border-counsly-line p-4">
+                    <p className="eyebrow">Establishment fees</p>
+                    <p className="mt-2 text-sm leading-6 text-counsly-body">Pending verified source row.</p>
+                  </article>
+                </>
+              )}
             </div>
           )}
 
           {tab === "Placements" && (
             <div className="space-y-3">
               <h2 className="font-display text-3xl text-counsly-ink">Placement evidence</h2>
-              <div className={user?.subscription_active ? "grid gap-3 md:grid-cols-2" : "relative grid gap-3 md:grid-cols-2"}>
-                {!user?.subscription_active && <div className="absolute inset-0 z-10 rounded-xl bg-counsly-canvas/70 backdrop-blur-[3px]" />}
+              <div className="grid gap-3 md:grid-cols-2">
                 <article className="rounded-lg border border-counsly-line p-4">
                   <p className="eyebrow">Placement rate</p>
                   <p className="mt-2 font-mono text-xl text-counsly-ink">{college.placementRate || "-"}%</p>
@@ -237,7 +325,6 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
                   <p className="mt-2 font-mono text-xl text-counsly-ink">{college.averagePackage || "-"} LPA</p>
                 </article>
               </div>
-              {!user?.subscription_active && <PremiumBoard body="Placement rows unlock with Full Access while free insight keeps the decision structure visible." title="Placement evidence is a paid detail" />}
             </div>
           )}
 
@@ -247,9 +334,25 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
               <div className="rounded-xl border border-counsly-line bg-[radial-gradient(circle_at_20%_20%,rgba(204,120,92,0.28),transparent_36%),linear-gradient(135deg,#efe9de,#faf9f5)] p-5">
                 <p className="flex gap-2 text-sm leading-6 text-counsly-body">
                   <MapPinned className="mt-1 h-4 w-4 shrink-0 text-counsly-coral" />
-                  {college.latitude && college.longitude
-                    ? `Map pin ready at ${college.latitude.toFixed(3)}, ${college.longitude.toFixed(3)}.`
-                    : "Map coordinates are not listed yet; use travel evidence below."}
+                  {college.latitude && college.longitude ? (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${college.latitude},${college.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-counsly-coral hover:text-counsly-ink font-semibold"
+                    >
+                      View College Campus on Google Maps
+                    </a>
+                  ) : (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(college.name)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-counsly-coral hover:text-counsly-ink font-semibold"
+                    >
+                      Search college location on Google Maps
+                    </a>
+                  )}
                 </p>
               </div>
               <div className="rounded-xl border border-counsly-line p-4 text-sm leading-6 text-counsly-body">
@@ -265,21 +368,45 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
         </Surface>
 
         <div className="space-y-4">
-          <Surface className="space-y-4 p-6" tone="dark">
-            <h2 className="font-display text-3xl text-white">Nearby</h2>
-            <p className="flex gap-2 text-sm leading-6 text-counsly-card">
+          <Surface className="space-y-4 p-6" tone="soft">
+            <h2 className="font-display text-3xl text-counsly-ink">Nearby</h2>
+            <p className="flex gap-2 text-sm leading-6 text-counsly-body">
               <TrainFront className="mt-1 h-4 w-4 shrink-0 text-counsly-coral" />
-              {college.railway}, {college.distanceKm || "distance pending"} km away.
+              <span>
+                 {college.railway ? (
+                  <a
+                    href={college.railwayLatitude && college.railwayLongitude
+                      ? `https://www.google.com/maps/search/?api=1&query=${college.railwayLatitude},${college.railwayLongitude}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(college.railway + " Railway Station, Tamil Nadu")}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-counsly-coral hover:text-counsly-ink font-semibold"
+                  >
+                    {college.railway}
+                  </a>
+                ) : (
+                  "Railway station context pending"
+                )}
+                {college.distanceKm ? `, ${college.distanceKm} km away` : " (distance pending)"}
+              </span>
             </p>
-            <p className="flex gap-2 text-sm leading-6 text-counsly-card">
+            <p className="flex gap-2 text-sm leading-6 text-counsly-body">
               <MapPinned className="mt-1 h-4 w-4 shrink-0 text-counsly-teal" />
-              {college.website ? "Official website is listed for this detail row." : "Nearest TFC panel becomes district-specific after onboarding."}
+              {college.website ? (
+                <a
+                  href={college.website.startsWith("http") ? college.website : `https://${college.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-counsly-teal hover:text-counsly-ink font-semibold"
+                >
+                  Visit Official College Website
+                </a>
+              ) : (
+                "Nearest TFC panel becomes district-specific after onboarding."
+              )}
             </p>
           </Surface>
-          <PremiumBoard
-            body="Placement detail and community seat evidence stay structurally visible, while masked premium rows keep free comparisons honest."
-            title="Full college insight"
-          />
         </div>
       </div>
     </div>

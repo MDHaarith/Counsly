@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from backend.config import settings
-from backend.routes import admin, auth, choices, compare, dataset, explore, financials, guidance, logging, maps, notifications, payments, reporting, rounds, scraping, trends, workspace
+from backend.routes import auth, choices, compare, explore, guidance, client_logging, maps, workspace
 from backend.database import engine, Base
 
 
@@ -51,20 +51,11 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(auth.router)
 app.include_router(guidance.router)
 app.include_router(choices.router)
-app.include_router(dataset.router)
 app.include_router(explore.router)
-app.include_router(financials.router)
 app.include_router(compare.router)
-app.include_router(rounds.router)
-app.include_router(trends.router)
 app.include_router(workspace.router)
-app.include_router(payments.router)
-app.include_router(logging.router)
-app.include_router(admin.router)
-app.include_router(scraping.router)
+app.include_router(client_logging.router)
 app.include_router(maps.router)
-app.include_router(notifications.router)
-app.include_router(reporting.router)
 
 @app.get("/")
 def get_root():

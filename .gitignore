@@ -37,3 +37,4 @@ supabase_db/Data_Extractor/**/output/
 .DS_Store
 Thumbs.db
 .vercel
+.antigravitycli

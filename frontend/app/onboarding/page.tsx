@@ -21,6 +21,9 @@ export function OnboardingWizard({ initialStep = 1 }: { initialStep?: number }) 
   const [community, setCommunity] = useState("OC");
   const [rollNumber, setRollNumber] = useState("");
   const [rollVerified, setRollVerified] = useState(false);
+  const [dob, setDob] = useState("");
+  const [generalRank, setGeneralRank] = useState<number | "">("");
+  const [communityRank, setCommunityRank] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [denied, setDenied] = useState(false);
@@ -95,6 +98,9 @@ export function OnboardingWizard({ initialStep = 1 }: { initialStep?: number }) 
           physics: Number(physics),
           rollNumber: rollNumber.trim(),
           rollVerified,
+          dob,
+          generalRank: generalRank === "" ? null : Number(generalRank),
+          communityRank: communityRank === "" ? null : Number(communityRank),
         }),
       );
       trackFunnelEvent("onboarding_completed", {
@@ -233,6 +239,39 @@ export function OnboardingWizard({ initialStep = 1 }: { initialStep?: number }) 
                   <span>Official-rank workflow can start once the counseling registry confirms this roll number.</span>
                 </p>
               )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-counsly-slate mb-1">Date of Birth</label>
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  required
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-counsly-slate mb-1">TNEA General Rank (Optional)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 1524"
+                  value={generalRank}
+                  onChange={(e) => setGeneralRank(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-counsly-slate mb-1">TNEA Community Rank (Optional)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 341"
+                  value={communityRank}
+                  onChange={(e) => setCommunityRank(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold focus:outline-none"
+                />
+              </div>
             </div>
 
             <button type="submit" disabled={loading} className="w-full bg-counsly-primary text-white py-3 rounded-lg font-bold text-sm shadow-md hover:bg-counsly-slate active:scale-98 transition-all flex items-center justify-center gap-2">

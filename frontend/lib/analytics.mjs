@@ -3,9 +3,6 @@ export const funnelEventNames = {
   firstRecommendationViewed: "first_recommendation_viewed",
   onboardingCompleted: "onboarding_completed",
   onboardingStarted: "onboarding_started",
-  paymentCompleted: "payment_completed",
-  paymentStarted: "payment_started",
-  paywallSeen: "paywall_seen",
 };
 
 const aliases = {
@@ -17,13 +14,6 @@ const aliases = {
   onboarding_started: funnelEventNames.onboardingStarted,
   onboardingCompleted: funnelEventNames.onboardingCompleted,
   onboardingStarted: funnelEventNames.onboardingStarted,
-  payment_completed: funnelEventNames.paymentCompleted,
-  payment_started: funnelEventNames.paymentStarted,
-  paymentCompleted: funnelEventNames.paymentCompleted,
-  paymentStarted: funnelEventNames.paymentStarted,
-  paywall: funnelEventNames.paywallSeen,
-  paywall_seen: funnelEventNames.paywallSeen,
-  paywallSeen: funnelEventNames.paywallSeen,
 };
 
 function resolveName(name) {
@@ -39,7 +29,6 @@ export function buildFunnelEvent(name, context = {}) {
   return {
     event: resolveName(name),
     ...rest,
-    subscribed: Boolean(user?.subscription_active),
     user_id: safeUserId(user),
   };
 }

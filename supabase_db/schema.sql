@@ -8,9 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
   google_id VARCHAR(100), -- Legacy migration alias
   google_email VARCHAR(200),
   name VARCHAR(100),
-  subscription_active BOOLEAN DEFAULT FALSE,
-  subscription_expiry DATE,
-  razorpay_payment_id VARCHAR(100),
   welcome_message_sent BOOLEAN DEFAULT FALSE,
   roll_number VARCHAR(20),
   roll_number_verified BOOLEAN DEFAULT FALSE,
@@ -189,18 +186,7 @@ CREATE TABLE IF NOT EXISTS tnea_roll_numbers (
   board VARCHAR(30)
 );
 
--- 17. Counselling Round Dates Table
-CREATE TABLE IF NOT EXISTS round_dates (
-  round_number SMALLINT PRIMARY KEY,
-  choice_start TIMESTAMPTZ,
-  choice_end TIMESTAMPTZ,
-  allotment TIMESTAMPTZ,
-  confirm_start TIMESTAMPTZ,
-  confirm_end TIMESTAMPTZ,
-  reporting_end TIMESTAMPTZ
-);
-
--- 18. Ingestion Audit Log
+-- 17. Ingestion Audit Log
 CREATE TABLE IF NOT EXISTS ingestion_audit_log (
   id BIGSERIAL PRIMARY KEY,
   dataset VARCHAR(80) NOT NULL,
@@ -214,7 +200,7 @@ CREATE TABLE IF NOT EXISTS ingestion_audit_log (
   error_message TEXT
 );
 
--- 20. Data Freshness Tracking
+-- 18. Data Freshness Tracking
 CREATE TABLE IF NOT EXISTS data_freshness (
   dataset_key VARCHAR(80) PRIMARY KEY,
   last_refreshed TIMESTAMPTZ NOT NULL,
@@ -222,55 +208,7 @@ CREATE TABLE IF NOT EXISTS data_freshness (
   notes TEXT
 );
 
--- 20. Admin Manual Update Log
-CREATE TABLE IF NOT EXISTS admin_update_log (
-  id BIGSERIAL PRIMARY KEY,
-  dataset VARCHAR(80) NOT NULL,
-  source_url TEXT,
-  rows_inserted INTEGER DEFAULT 0,
-  rows_updated INTEGER DEFAULT 0,
-  rows_rejected INTEGER DEFAULT 0,
-  status VARCHAR(40) DEFAULT 'needs_review',
-  summary TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- 21. Scraping Automation Jobs
-CREATE TABLE IF NOT EXISTS scraping_jobs (
-  id BIGSERIAL PRIMARY KEY,
-  dataset VARCHAR(80) NOT NULL,
-  source_url TEXT,
-  job_type VARCHAR(40) DEFAULT 'real_time_scraping',
-  status VARCHAR(40) NOT NULL,
-  row_count INTEGER DEFAULT 0,
-  error_message TEXT,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- 22. AI Guidance Audit Log
-CREATE TABLE IF NOT EXISTS ai_guidance_log (
-  id BIGSERIAL PRIMARY KEY,
-  workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
-  feature VARCHAR(40) NOT NULL,
-  ai_available BOOLEAN DEFAULT FALSE,
-  prompt_context TEXT,
-  response_text TEXT,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- 23. Payment Audit Log
-CREATE TABLE IF NOT EXISTS payment_audit_log (
-  id BIGSERIAL PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-  event_type VARCHAR(40) NOT NULL, -- 'order_created', 'payment_attempted', 'verified', 'failed'
-  razorpay_order VARCHAR(100),
-  razorpay_payment VARCHAR(100),
-  amount_paise INTEGER,
-  error_message TEXT,
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- 23. Compare History
+-- 19. Compare History
 CREATE TABLE IF NOT EXISTS college_compare_history (
   id BIGSERIAL PRIMARY KEY,
   workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
@@ -281,34 +219,12 @@ CREATE TABLE IF NOT EXISTS college_compare_history (
   saved BOOLEAN DEFAULT FALSE
 );
 
--- 24. Rounds Checklist Tracker Progress
-CREATE TABLE IF NOT EXISTS round_checklist_progress (
-  id BIGSERIAL PRIMARY KEY,
-  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  round_number SMALLINT NOT NULL,
-  step_1_completed BOOLEAN DEFAULT FALSE, -- e.g., 'View Current Seat'
-  step_2_completed BOOLEAN DEFAULT FALSE, -- e.g., 'Review official consequence guide'
-  step_3_completed BOOLEAN DEFAULT FALSE, -- e.g., 'Read Consequence Guide'
-  step_4_completed BOOLEAN DEFAULT FALSE, -- e.g., 'Confirm Decision'
-  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (workspace_id, round_number)
-);
-
--- 25. Device Fingerprints Abuse Layer
+-- 20. Device Fingerprints Abuse Layer
 CREATE TABLE IF NOT EXISTS device_fingerprints (
   id BIGSERIAL PRIMARY KEY,
   fingerprint_hash VARCHAR(64) UNIQUE NOT NULL,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
--- 26. Subscriptions Ledger Table
-CREATE TABLE IF NOT EXISTS subscriptions (
-  id UUID PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status VARCHAR(20) DEFAULT 'active',
-  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  expires_at TIMESTAMPTZ
 );
 
 -- Indices for performance

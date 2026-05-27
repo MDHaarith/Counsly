@@ -3,9 +3,6 @@ export const funnelEventNames: {
   firstRecommendationViewed: string;
   onboardingCompleted: string;
   onboardingStarted: string;
-  paymentCompleted: string;
-  paymentStarted: string;
-  paywallSeen: string;
 };
 
 export function buildFunnelEvent(name: string, context?: Record<string, unknown>): Record<string, unknown>;

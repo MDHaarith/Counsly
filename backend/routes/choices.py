@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 from io import StringIO
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
@@ -128,7 +128,7 @@ def reorder_choices(req: ReorderRequest, current_user: User = Depends(get_curren
         workspace_id=ws.id,
         event_type="choices_reordered",
         summary=f"Reordered engineering choice list. Current total selections: {len(updates)}.",
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     db.add(activity)
     
@@ -237,7 +237,7 @@ def create_snapshot(req: SnapshotCreate, current_user: User = Depends(get_curren
         workspace_id=ws.id,
         event_type="snapshot_saved",
         summary=f"Saved choice list snapshot: '{req.title}' containing {len(choices)} choices.",
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     db.add(activity)
     
@@ -314,7 +314,7 @@ def restore_snapshot(snapshot_id: str, current_user: User = Depends(get_current_
         workspace_id=ws.id,
         event_type="snapshot_restored",
         summary=f"Restored choice list snapshot: '{snapshot.title}' with {len(snap_items)} choices.",
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
     db.add(activity)
     

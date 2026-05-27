@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import User, WorkspaceActivity
 from backend.routes.auth import get_current_user
-from backend.config import settings
-from backend.schemas import AIGuidanceRequest, AIGuidanceResponse, OnboardingRequest, OnboardingResponse
+from backend.schemas import OnboardingRequest, OnboardingResponse
+from backend.routes.rate_limiter import rate_limit
 
 router = APIRouter(prefix="/guidance", tags=["guidance"])
 
@@ -18,41 +18,7 @@ def compute_aggregate(maths: int, physics: int, chemistry: int) -> float:
     return float(maths + physics + chemistry)
 
 
-def build_ai_guidance(
-    marks_total: float | None,
-    community: str | None,
-    district: str | None,
-    preferred_branches: list[str],
-    provider_enabled: bool,
-) -> dict:
-    branches = ", ".join(preferred_branches) if preferred_branches else "the selected branch set"
-    home = district or "the student district"
-    score = marks_total if marks_total is not None else 0
-    confidence = "High" if score >= 190 else "Medium" if score >= 170 else "Conservative"
-
-    if provider_enabled:
-        return {
-            "ai_available": True,
-            "strategy_note": (
-                f"AI strategy: prioritize {branches} around {home}, keep one ambitious anchor, "
-                "two moderate choices, and multiple safe branches before final filing."
-            ),
-            "confidence_label": confidence,
-            "next_action": "Review recommendations and save a choice snapshot.",
-        }
-
-    return {
-        "ai_available": False,
-        "strategy_note": (
-            f"Data-only strategy: prioritize {branches} for {community or 'OC'} community near {home}. "
-            "Use cutoff history, official rank, and district practicality before trusting any high-risk row."
-        ),
-        "confidence_label": confidence,
-        "next_action": "Open recommendations, compare two targets, then save the choice list.",
-    }
-
-
-@router.post("/onboarding", response_model=OnboardingResponse)
+@router.post("/onboarding", response_model=OnboardingResponse, dependencies=[Depends(rate_limit(10, 60))])
 def run_onboarding(
     req: OnboardingRequest,
     current_user: User = Depends(get_current_user),
@@ -77,7 +43,7 @@ def run_onboarding(
 
     ws.onboarding_step = "completed"
     ws.onboarding_completed = True
-    ws.onboarding_completed_at = datetime.utcnow()
+    ws.onboarding_completed_at = datetime.now(timezone.utc)
 
     workspace_settings = ws.settings
     if workspace_settings:
@@ -94,7 +60,7 @@ def run_onboarding(
                 f"Marks submitted successfully: M/P/C = {req.maths}/{req.physics}/{req.chemistry} "
                 f"(Aggregate: {total})."
             ),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     )
 
@@ -107,19 +73,3 @@ def run_onboarding(
         message="Eligibility confirmed. Continue with branch and district planning.",
         onboarding_completed=True,
     )
-
-
-@router.post("/ai", response_model=AIGuidanceResponse)
-def ai_guidance(
-    req: AIGuidanceRequest,
-    current_user: User = Depends(get_current_user),
-):
-    workspace_settings = current_user.workspace.settings if current_user.workspace and current_user.workspace.settings else None
-    response = build_ai_guidance(
-        marks_total=req.marks_total,
-        community=req.community,
-        district=req.district or (workspace_settings.default_district if workspace_settings else None),
-        preferred_branches=req.preferred_branches,
-        provider_enabled=settings.AI_PROVIDER_CONFIGURED,
-    )
-    return AIGuidanceResponse(**response)

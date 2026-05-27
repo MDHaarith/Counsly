@@ -6,7 +6,7 @@ import { ArrowRight, Search } from "lucide-react";
 
 import { Badge, PageHeader, Surface } from "@/components/ui";
 import { searchColleges } from "@/lib/api.mjs";
-import { branches, collegeCatalog, districts, toneForBand } from "@/lib/product";
+import { branches, collegeCatalog, districts, toneForBand, cleanCollegeName } from "@/lib/product";
 
 export default function ExplorePage() {
   const [search, setSearch] = useState("");
@@ -104,7 +104,7 @@ export default function ExplorePage() {
                   <Badge>{college.code}</Badge>
                   <Badge tone={toneForBand(college.fitBand)}>{college.fitBand} fit</Badge>
                 </div>
-                <h2 className="font-display text-3xl text-counsly-ink">{college.name}</h2>
+                <h2 className="font-display text-3xl text-counsly-ink">{cleanCollegeName(college.name)}</h2>
                 <p className="mt-1 text-sm leading-6 text-counsly-body">
                   {college.branchName} in {college.district}
                 </p>

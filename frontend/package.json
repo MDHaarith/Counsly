@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "test": "node --test tests/*.test.mjs",
+    "test:integration": "APP_ENV=test PYTHONPATH=.. ../.venv/bin/python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 18080 --log-level warning & BPID=$!; sleep 3; NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:18080 node --test tests/integration_flow.spec.mjs; STATUS=$?; kill $BPID; exit $STATUS",
     "start": "next start",
     "lint": "next lint"
   },

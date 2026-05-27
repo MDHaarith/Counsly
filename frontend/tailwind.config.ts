@@ -29,9 +29,9 @@ const config: Config = {
         }
       },
       fontFamily: {
-        sans: ["DM Sans", "sans-serif"],
-        display: ["Newsreader", "Georgia", "serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["Copernicus", "Georgia", "serif"],
+        mono: ["monospace"],
       },
       animation: {
         "fade-in": "fadeIn 0.4s ease-out forwards",
