@@ -2,7 +2,7 @@
 
 ## Objective
 
-Build an advanced deterministic recommendation algorithm for TNEA college suggestions that ranks `college + branch` pairs using actual historical evidence. The system must not expose a fake fit score, must not depend on seat matrix data, and must explain recommendations with structured facts rather than narrative confidence.
+Build an advanced deterministic recommendation algorithm for TNEA college suggestions that ranks `college + branch` pairs using actual historical evidence. The system must not expose a fake fit score, must not depend on unreleased or unavailable seat matrix data, and must explain recommendations with structured facts rather than narrative confidence.
 
 ## Current Context
 
@@ -27,7 +27,7 @@ The backend has:
 
 ## Non-Goals
 
-- Do not use seat matrix data in the recommendation algorithm.
+- Do not use seat matrix data unless an official released seat matrix for the active counselling year has been imported and marked available.
 - Do not show a numerical `fitScore` or any synthetic AI-style score in the UI.
 - Do not invent admission certainty when rank or cutoff history is missing.
 - Do not train a machine learning model unless future labelled admission outcomes are available.
@@ -67,7 +67,33 @@ Hard filters run before ranking:
 - search text over college code, college name, district, and branch name
 - community-specific cutoff lookup after candidate generation
 
-No seat matrix join is required.
+No seat matrix join is required for the first release.
+
+## Seat Matrix Release Handling
+
+Seat matrix is optional and release-gated.
+
+Before the official seat matrix is released and imported:
+
+- do not query seat matrix data.
+- do not show seat counts.
+- do not reduce a recommendation because seat data is missing.
+- do not mention seat matrix in recommendation evidence.
+
+After the official seat matrix is released and imported:
+
+- expose a backend flag such as `seat_matrix_available: true`.
+- include `seat_matrix_year` and `seat_matrix_source` in metadata.
+- use community/category seat data only as a secondary capacity and tie-break signal.
+- never let seat matrix override rank and cutoff evidence.
+- show seat data as factual context, not admission probability.
+
+Future seat-matrix tie-break order:
+
+1. rank and cutoff band remain primary.
+2. branch preference remains next.
+3. official seat capacity may break ties within the same band and similar margins.
+4. missing seat matrix for a specific branch after release should lower `seat_data_confidence`, not the admission band.
 
 ## Historical Evidence Model
 
@@ -144,7 +170,8 @@ Sort order:
 4. Mark margin strength.
 5. Trend stability, preferring stable or loosening trends over tightening trends.
 6. College quality tie-breakers: autonomous, NBA, placement rate, average package.
-7. Practical tie-breakers: district match, lower travel distance, hostel/transport availability, annual fee.
+7. Official released seat matrix capacity, only when available.
+8. Practical tie-breakers: district match, lower travel distance, hostel/transport availability, annual fee.
 
 The internal tuple is acceptable because it is only an ordering mechanism. It must not be returned as `fit_score`.
 
@@ -171,6 +198,10 @@ Each result should expose structured fields:
 - `rank_trend`
 - `mark_trend`
 - `evidence_points`
+- `seat_matrix_available`, default false
+- `seat_matrix_year`, only when official seat matrix is available
+- `seat_data_confidence`, only when official seat matrix is available
+- `community_seats`, only when official seat matrix is available for that candidate
 - quality/practicality fields already used by cards
 
 `evidence_points` should be short factual strings:
@@ -287,13 +318,24 @@ If there is no cutoff history for the community and branch:
 - show `Insufficient Data`.
 - sort below evidence-backed recommendations.
 
+If official seat matrix is not released:
+
+- omit seat fields from the recommendation response.
+- keep data confidence based on rank and cutoff history only.
+
+If official seat matrix is released but a candidate has no seat row:
+
+- include `seat_data_confidence: "Missing"`.
+- do not change the recommendation band.
+
 ## Testing Requirements
 
 Backend unit tests must cover:
 
 - rank-first behavior when rank and mark disagree.
 - mark fallback when rank is absent.
-- no seat matrix dependency.
+- no seat matrix dependency before official release.
+- released seat matrix acts only as a tie-breaker and never changes the rank/cutoff band.
 - preferred branch ordering inside the same band.
 - missing-data banding.
 - `Unlikely` hidden by default.
@@ -303,6 +345,7 @@ Frontend tests must cover:
 - recommendation API request includes aggregate, ranks, community, and preferred branches.
 - recommendation card does not show `Fit`.
 - recommendation card renders evidence points and band.
+- recommendation card omits seat fields before official seat matrix release.
 
 Integration test should confirm:
 
