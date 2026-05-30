@@ -8,6 +8,24 @@ const fallbackBranch = {
   name: "Computer Science and Engineering",
 };
 
+const validCommunities = new Set(["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"]);
+
+export function normalizeCommunity(value) {
+  const community = String(value || "OC").trim().toUpperCase();
+  return validCommunities.has(community) ? community : "OC";
+}
+
+export function readStudentCommunity() {
+  if (typeof window === "undefined") return "OC";
+  try {
+    const stored = window.localStorage?.getItem("counsly_student_context");
+    if (!stored) return "OC";
+    return normalizeCommunity(JSON.parse(stored)?.community);
+  } catch {
+    return "OC";
+  }
+}
+
 function fitBandForScore(score) {
   if (score >= 92) return "Safe";
   if (score >= 84) return "Moderate";
@@ -178,6 +196,18 @@ export function buildExploreCollege(college, branch = fallbackBranch) {
     railwayLatitude: college.nearest_railway_station_latitude,
     railwayLongitude: college.nearest_railway_station_longitude,
     distanceKm: college.nearest_railway_distance_km || 0,
+    expressStation: college.nearest_express_station || null,
+    expressStationLatitude: college.nearest_express_station_latitude || null,
+    expressStationLongitude: college.nearest_express_station_longitude || null,
+    expressStationDistanceKm: college.nearest_express_station_distance_km || null,
+    busStation: college.nearest_bus_station || null,
+    busStationLatitude: college.nearest_bus_station_latitude || null,
+    busStationLongitude: college.nearest_bus_station_longitude || null,
+    busStationDistanceKm: college.nearest_bus_station_distance_km || null,
+    busStop: college.nearest_bus_stop || null,
+    busStopLatitude: college.nearest_bus_stop_latitude || null,
+    busStopLongitude: college.nearest_bus_stop_longitude || null,
+    busStopDistanceKm: college.nearest_bus_stop_distance_km || null,
     fitScore: college.fit_score || 0,
     fitBand: fitBandForScore(college.fit_score || 0),
   };
@@ -195,7 +225,7 @@ export function buildCollegeDetail(detail) {
       {
         ...detail,
         fit_score: detail.fit_score || 0,
-        seats: firstBranch.approved_intake || firstBranch.seats?.total || 0,
+        seats: firstBranch.seats?.available ?? firstBranch.approved_intake ?? firstBranch.seats?.total ?? 0,
       },
       branch,
     ),
@@ -254,7 +284,7 @@ export function reorderChoices(choices) {
         branch_code: choice.branchCode,
         category: choice.fitBand,
         notes: choice.notes,
-        new_priority: choice.priority,
+        priority: choice.priority,
       })),
     },
     method: "PUT",
@@ -300,20 +330,25 @@ export function uploadChoiceCsv(file) {
 }
 
 export async function searchColleges(payload) {
-  const rows = await apiRequest("/explore/search", { body: payload, method: "POST" });
-  const branch = payload.branch_code
-    ? { code: payload.branch_code, name: `${payload.branch_code} branch match` }
+  const requestPayload = { ...payload, community: normalizeCommunity(payload.community || readStudentCommunity()) };
+  const rows = await apiRequest("/explore/search", { body: requestPayload, method: "POST" });
+  const branch = requestPayload.branch_code
+    ? { code: requestPayload.branch_code, name: `${requestPayload.branch_code} branch match` }
     : fallbackBranch;
-  return rows.map((row) => buildExploreCollege(row, branch));
+  return rows.map((row) => buildExploreCollege(
+    row,
+    row.branch_code ? { code: row.branch_code, name: row.branch_name || `${row.branch_code} branch match` } : branch,
+  ));
 }
 
-export async function fetchCollegeDetail(code) {
-  return buildCollegeDetail(await apiRequest(`/explore/${encodeURIComponent(code)}`));
+export async function fetchCollegeDetail(code, community = "") {
+  const query = community ? `?community=${encodeURIComponent(community)}` : "";
+  return buildCollegeDetail(await apiRequest(`/explore/${encodeURIComponent(code)}${query}`));
 }
 
-export function compareColleges(codes, branches) {
+export function compareColleges(codes, branches, community = readStudentCommunity()) {
   return apiRequest("/compare/", {
-    body: { college_codes: codes, branch_codes: branches },
+    body: { college_codes: codes, branch_codes: branches, community: normalizeCommunity(community) },
     method: "POST",
   });
 }
@@ -358,4 +393,11 @@ export function fetchMapColleges(params = {}) {
 export function fetchTfcLocations(params = {}) {
   const qs = new URLSearchParams(params).toString();
   return apiRequest(`/maps/tfc-locations${qs ? `?${qs}` : ""}`);
+}
+
+export function verifyRollNumber(rollNumber) {
+  return apiRequest("/auth/verify-roll", {
+    body: { roll_number: rollNumber },
+    method: "POST",
+  });
 }

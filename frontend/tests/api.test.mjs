@@ -8,6 +8,8 @@ import {
   buildExploreCollege,
   buildRequestInit,
   buildWorkspaceSettings,
+  compareColleges,
+  reorderChoices,
 } from "../lib/api.mjs";
 
 test("buildChoiceRow maps backend choice metadata into filing rows", () => {
@@ -133,4 +135,80 @@ test("buildWorkspaceSettings normalizes backend defaults for profile forms", () 
   assert.deepEqual(settings.preferredBranches, ["CS", "IT"]);
   assert.equal(settings.compactView, true);
   assert.equal(settings.mobileDensity, "compact");
+});
+
+
+test("reorderChoices sends the priority field expected by the backend", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
+  const calls = [];
+  globalThis.window = {
+    localStorage: {
+      getItem() {
+        return "";
+      },
+      removeItem() {},
+    },
+    sessionStorage: {
+      getItem() {
+        return "";
+      },
+      removeItem() {},
+      setItem() {},
+    },
+  };
+  globalThis.fetch = async (url, init) => {
+    calls.push({ init, url });
+    return { ok: true, status: 200, json: async () => ({ success: true }) };
+  };
+
+  await reorderChoices([
+    { branchCode: "CS", code: "0001", fitBand: "Safe", notes: "Top", priority: 1 },
+  ]);
+
+  const body = JSON.parse(calls[0].init.body);
+  assert.deepEqual(body.priorities[0], {
+    branch_code: "CS",
+    category: "Safe",
+    college_code: "0001",
+    notes: "Top",
+    priority: 1,
+  });
+  assert.equal("new_priority" in body.priorities[0], false);
+
+  globalThis.fetch = previousFetch;
+  globalThis.window = previousWindow;
+});
+
+test("compareColleges includes the selected community in the request body", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousWindow = globalThis.window;
+  const calls = [];
+  globalThis.window = {
+    localStorage: {
+      getItem() {
+        return "";
+      },
+      removeItem() {},
+    },
+    sessionStorage: {
+      getItem() {
+        return "";
+      },
+      removeItem() {},
+      setItem() {},
+    },
+  };
+  globalThis.fetch = async (url, init) => {
+    calls.push({ init, url });
+    return { ok: true, status: 200, json: async () => ({ colleges: [], explanation: "" }) };
+  };
+
+  await compareColleges(["0001", "2006"], ["CS", "IT"], "BC");
+
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.community, "BC");
+
+  globalThis.fetch = previousFetch;
+  globalThis.window = previousWindow;
 });

@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, desc
-from typing import List, Dict, Any
+from sqlalchemy import or_, and_
+from typing import List, Dict, Any, Optional
+from backend.community import community_seat_payload, resolve_user_community
 from backend.database import get_db
 from backend.models import User, College, Branch, CollegeBranch, CommunitySeat, CutoffData, TFCLocation
 from backend.schemas import CollegeSearchQuery, CollegeCompactResponse, CollegeDetailResponse, CutoffTrend
 from backend.routes.auth import get_current_user
+from backend.routes.maps import normalized_bus_stop_name
 
 router = APIRouter(prefix="/explore", tags=["explore"])
 
@@ -15,6 +17,7 @@ def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_cu
     home_district = None
     if ws and ws.settings:
         home_district = ws.settings.default_district
+    user_community = resolve_user_community(req.community, current_user, db)
         
     query = db.query(College)
     
@@ -71,6 +74,41 @@ def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_cu
             
         fit_score = min(100.0, max(0.0, fit_score))
         
+        branch_code = req.branch_code
+        college_branch = None
+        if branch_code:
+            college_branch = db.query(CollegeBranch).filter(
+                and_(
+                    CollegeBranch.college_code == c.code,
+                    CollegeBranch.branch_code == branch_code,
+                )
+            ).first()
+        else:
+            college_branch = db.query(CollegeBranch).filter(
+                CollegeBranch.college_code == c.code
+            ).order_by(CollegeBranch.branch_code.asc()).first()
+            branch_code = college_branch.branch_code if college_branch else None
+
+        branch = db.query(Branch).filter(Branch.code == branch_code).first() if branch_code else None
+        cutoff = None
+        seat_count = None
+        if branch_code:
+            cutoff = db.query(CutoffData).filter(
+                and_(
+                    CutoffData.college_code == c.code,
+                    CutoffData.branch_code == branch_code,
+                    CutoffData.community == user_community,
+                )
+            ).order_by(CutoffData.year.desc()).first()
+            seats = db.query(CommunitySeat).filter(
+                and_(
+                    CommunitySeat.college_code == c.code,
+                    CommunitySeat.branch_code == branch_code,
+                )
+            ).first()
+            if seats:
+                seat_count = community_seat_payload(seats, user_community)["available"]
+
         response.append(CollegeCompactResponse(
             code=c.code,
             name=c.name,
@@ -79,7 +117,12 @@ def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_cu
             is_autonomous=c.is_autonomous,
             fee_structure_annual=c.fee_structure_annual,
             placement_rate_pct=c.placement_rate_pct,
-            fit_score=round(fit_score, 1)
+            fit_score=round(fit_score, 1),
+            branch_code=branch_code,
+            branch_name=branch.name if branch else None,
+            cutoff_mark_2025=cutoff.cutoff_mark if cutoff else None,
+            cutoff_rank_2025=cutoff.cutoff_rank if cutoff else None,
+            seats=seat_count,
         ))
         
     # Sort response by fit_score descending
@@ -87,10 +130,16 @@ def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_cu
     return response
 
 @router.get("/{college_code}", response_model=CollegeDetailResponse)
-def get_college_details(college_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_college_details(
+    college_code: str,
+    community: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     college = db.query(College).filter(College.code == college_code).first()
     if not college:
         raise HTTPException(status_code=404, detail="College not found")
+    user_community = resolve_user_community(community, current_user, db)
         
     # Retrieve branches mapping
     cb_mappings = db.query(CollegeBranch).filter(CollegeBranch.college_code == college_code).all()
@@ -105,17 +154,13 @@ def get_college_details(college_code: str, current_user: User = Depends(get_curr
             )
         ).first()
         
-        seats_dict = {}
         if seats:
+            seats_dict = community_seat_payload(seats, user_community)
+        else:
             seats_dict = {
-                "oc": seats.oc,
-                "bc": seats.bc,
-                "bcm": seats.bcm,
-                "mbc": seats.mbc,
-                "sc": seats.sc,
-                "sca": seats.sca,
-                "st": seats.st,
-                "total": seats.total
+                "community": user_community,
+                "available": 0,
+                "total": cb.approved_intake or 0,
             }
             
         branches_list.append({
@@ -128,9 +173,12 @@ def get_college_details(college_code: str, current_user: User = Depends(get_curr
             "seats": seats_dict
         })
         
-    # Retrieve cutoff trends
+    # Retrieve cutoff trends filtered by the resolved community
     cutoffs = db.query(CutoffData).filter(
-        CutoffData.college_code == college_code
+        and_(
+            CutoffData.college_code == college_code,
+            CutoffData.community == user_community
+        )
     ).order_by(CutoffData.year.desc()).all()
     
     trends_dict: Dict[str, List[CutoffTrend]] = {}
@@ -157,6 +205,8 @@ def get_college_details(college_code: str, current_user: User = Depends(get_curr
             "phone": tfc.phone,
         }
             
+    bus_stop_name = normalized_bus_stop_name(college)
+
     return CollegeDetailResponse(
         code=college.code,
         name=college.name,
@@ -177,6 +227,18 @@ def get_college_details(college_code: str, current_user: User = Depends(get_curr
         nearest_railway_station_latitude=college.nearest_railway_station_latitude,
         nearest_railway_station_longitude=college.nearest_railway_station_longitude,
         nearest_railway_distance_km=college.nearest_railway_distance_km,
+        nearest_express_station=college.nearest_express_station,
+        nearest_express_station_latitude=college.nearest_express_station_latitude,
+        nearest_express_station_longitude=college.nearest_express_station_longitude,
+        nearest_express_station_distance_km=college.nearest_express_station_distance_km,
+        nearest_bus_station=college.nearest_bus_station,
+        nearest_bus_station_latitude=college.nearest_bus_station_latitude,
+        nearest_bus_station_longitude=college.nearest_bus_station_longitude,
+        nearest_bus_station_distance_km=college.nearest_bus_station_distance_km,
+        nearest_bus_stop=bus_stop_name,
+        nearest_bus_stop_latitude=college.nearest_bus_stop_latitude if bus_stop_name else None,
+        nearest_bus_stop_longitude=college.nearest_bus_stop_longitude if bus_stop_name else None,
+        nearest_bus_stop_distance_km=college.nearest_bus_stop_distance_km if bus_stop_name else None,
         nearest_tfc=nearest_tfc,
         branches=branches_list,
         cutoff_trends=trends_dict,

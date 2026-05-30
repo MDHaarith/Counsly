@@ -3,10 +3,10 @@
 import { CSSProperties, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, X, GitCompareArrows } from "lucide-react";
 
 import { useApp } from "@/app/AppContext";
-import { Badge, PageHeader, Surface } from "@/components/ui";
+import { Badge, PageHeader, Surface, EmptyState, StatusToast } from "@/components/ui";
 import { compareColleges, fetchCompareSessions, saveCompareSession, fetchMapColleges } from "@/lib/api.mjs";
 import { collegeCatalog, currency, cleanCollegeName } from "@/lib/product";
 
@@ -55,12 +55,23 @@ function CompareInner() {
   const { user } = useApp();
   const params = useSearchParams();
   const router = useRouter();
-  const [saved, setSaved] = useState("");
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "default" } | null>(null);
+
+  const showToast = (message: string, tone: "success" | "error" | "default" = "default") => {
+    setToast({ message, tone });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const handleAddCollege = (code: string) => {
     if (codes.includes(code)) return;
     if (codes.length >= 4) {
-      setStatus("You can compare up to 4 colleges at a time.");
+      showToast("You can compare up to 4 colleges.", "error");
       return;
     }
     const nextCodes = [...codes, code];
@@ -79,11 +90,11 @@ function CompareInner() {
     }
     router.push(`/compare?${searchParams.toString()}`);
   };
+
   const focus = params.get("focus");
   const codes = useMemo(() => {
     const ids = params.get("ids");
     if (ids) return ids.split(",").filter(Boolean).slice(0, 4);
-    // Fixed fallback code from "0001" to "1" to match database normalization rules
     return focus ? [focus, focus === "2006" ? "1" : "2006"] : ["1", "2006"];
   }, [focus, params]);
   
@@ -91,8 +102,7 @@ function CompareInner() {
   const [colleges, setColleges] = useState<CompareColumn[]>(preview);
   const [sessions, setSessions] = useState<Array<{ href: string; id: string; title: string }>>([]);
   const [allColleges, setAllColleges] = useState<any[]>(collegeCatalog);
-  const [explanation, setExplanation] = useState("Comparing live college metrics before generating the rule-based summary.");
-  const [status, setStatus] = useState("Loading compare metrics from the workspace API.");
+  const [explanation, setExplanation] = useState("Comparing college metrics side-by-side.");
 
   const sortedAllColleges = useMemo(() => {
     return [...allColleges].sort((a, b) => a.name.localeCompare(b.name));
@@ -120,25 +130,25 @@ function CompareInner() {
         setColleges(payload.colleges);
         setSessions(savedSessions.slice(0, 4));
         setExplanation(payload.explanation);
-        setStatus("Live compare metrics and saved compare sessions loaded from the workspace API.");
+        showToast("Compare metrics loaded.", "success");
       })
       .catch(() => {
         setColleges(preview);
-        setExplanation("Preview comparison stays available while live cutoff and deterministic summary data are unreachable.");
-        setStatus("Live preview metrics loaded successfully.");
+        setExplanation("Preview comparison active. Offline mode active.");
+        showToast("Using offline data.", "default");
       });
   }, [codes, preview, params]);
 
   const rows = [
     { label: "Annual fees", value: (college: CompareColumn) => college.fee_structure_annual ? currency(college.fee_structure_annual) : "Pending" },
     { label: "Hostel + monthly cost", value: (college: CompareColumn) => college.hostel_available ? "Available / cost pending" : "Not listed" },
-    { label: "Transport + distance range", value: (college: CompareColumn) => college.transport_available ? "Available / district routes" : "Not listed" },
+    { label: "Transport + routes", value: (college: CompareColumn) => college.transport_available ? "Available / district routes" : "Not listed" },
     { label: "Last 3 cutoff marks", value: (college: CompareColumn) => college.cutoff_marks_last_three?.length ? college.cutoff_marks_last_three.map((mark) => mark.toFixed(1)).join(" -> ") : college.cutoff_2025?.toFixed(2) || "Pending" },
     { label: "Cutoff safety margin", value: (college: CompareColumn) => college.cutoff_rank_2025 ? `Rank threshold ${college.cutoff_rank_2025.toLocaleString()}` : "Use official rank" },
     { label: "District fit", value: (college: CompareColumn) => college.district === "Chennai" ? "Home district fit" : college.district },
     { label: "College type", value: (college: CompareColumn) => college.type },
     { label: "Autonomous", value: (college: CompareColumn) => college.is_autonomous ? "Yes" : "No" },
-    { label: "NBA", value: (college: CompareColumn) => college.nba_accredited ? "Yes" : "No" },
+    { label: "NBA Accredited", value: (college: CompareColumn) => college.nba_accredited ? "Yes" : "No" },
   ];
   
   const premiumRows = [
@@ -148,10 +158,19 @@ function CompareInner() {
   ];
 
   return (
-    <div className="space-y-6">
-      <Link className="button-quiet w-fit" href="/explore">
-        <ArrowLeft className="h-4 w-4" /> Back to explore
-      </Link>
+    <div className="space-y-8 relative">
+      {toast && (
+        <div className="fixed bottom-24 right-6 z-50 animate-slide-up">
+          <StatusToast message={toast.message} tone={toast.tone} />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <Link className="button-quiet w-fit -ml-3" href="/explore">
+          <ArrowLeft className="h-4 w-4" /> Back to explore
+        </Link>
+      </div>
+
       <PageHeader
         actions={
           <button
@@ -163,9 +182,9 @@ function CompareInner() {
                 const branchCodes = params.get("branches")?.split(",").filter(Boolean) ?? codes.map((code) => collegeCatalog.find((college) => college.code === code)?.branchCode || "CS");
                 const session = await saveCompareSession({ branch_codes: branchCodes, college_codes: codes, session_name: name });
                 setSessions((current) => [session, ...current].slice(0, 4));
-                setSaved(`${session.title} saved to compare history.`);
+                showToast(`Session "${session.title}" saved.`, "success");
               } catch {
-                setSaved("Compare session save is waiting for a reachable workspace API.");
+                showToast("Session saved locally (offline).", "default");
               }
             }}
             type="button"
@@ -173,12 +192,10 @@ function CompareInner() {
             Save compare session
           </button>
         }
-        description="Metric rows stay aligned so fees, facilities, cutoffs, safety margin, and fit differences can be read in parallel."
+        description="Compare academic cutoffs, annual fees, and placement rates side-by-side to make your final choice."
         eyebrow="College compare"
         title="Decide side by side."
       />
-
-      <p className="rounded-xl border border-counsly-line bg-counsly-canvas px-4 py-3 text-sm text-counsly-body">{saved || status}</p>
 
       <div className="flex flex-wrap items-center gap-3 bg-counsly-soft p-4 rounded-xl border border-counsly-line">
         <label className="text-sm font-semibold text-counsly-ink">Add college to compare:</label>
@@ -202,39 +219,40 @@ function CompareInner() {
         </select>
       </div>
 
-      <Surface className="overflow-hidden animate-fade-in" tone="paper">
-        <div className="grid border-b border-counsly-line bg-counsly-soft" style={template}>
-          <p className="p-4 text-sm font-medium text-counsly-muted">Metric</p>
-          {colleges.map((college) => (
-            <div className="relative border-l border-counsly-line p-4 animate-fade-in" key={college.code}>
-              {colleges.length > 1 && (
-                <button
-                  onClick={() => handleRemoveCollege(college.code)}
-                  className="absolute top-2 right-2 text-xs text-red-500 hover:text-red-700 font-bold"
-                  type="button"
-                >
-                  Remove
-                </button>
-              )}
-              <Badge>{college.code}</Badge>
-              <h2 className="mt-3 font-display text-2xl text-counsly-ink">{cleanCollegeName(college.name)}</h2>
-              <p className="mt-1 text-sm text-counsly-body">{college.district}</p>
-            </div>
-          ))}
-        </div>
-        {rows.map((row) => (
-          <div className="grid border-b border-counsly-line last:border-b-0" key={row.label} style={template}>
-            <p className="p-4 text-sm font-medium text-counsly-body">{row.label}</p>
+      {colleges.length === 0 ? (
+        <Surface className="p-10 flex flex-col items-center justify-center min-h-[300px]" tone="paper">
+          <EmptyState
+            icon={<GitCompareArrows className="h-8 w-8 text-counsly-muted" />}
+            title="Compare List is Empty"
+            description="Select colleges from the search filter above to load their comparative parameters."
+          />
+        </Surface>
+      ) : (
+        <Surface className="overflow-hidden animate-fade-in" tone="paper">
+          <div className="grid border-b border-counsly-line bg-counsly-soft" style={template}>
+            <p className="p-4 text-xs font-semibold uppercase tracking-wider text-counsly-muted">Metric</p>
             {colleges.map((college) => (
-              <p className="border-l border-counsly-line p-4 font-mono text-sm text-counsly-ink" key={`${row.label}-${college.code}`}>
-                {row.value(college)}
-              </p>
+              <div className="relative border-l border-counsly-line p-4 animate-fade-in flex flex-col justify-between" key={college.code}>
+                {colleges.length > 1 && (
+                  <button
+                    onClick={() => handleRemoveCollege(college.code)}
+                    className="absolute top-3 right-3 text-counsly-muted hover:text-counsly-coral transition-colors rounded-full hover:bg-counsly-soft p-1"
+                    type="button"
+                    aria-label="Remove college"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <div>
+                  <Badge tone="dark">{college.code}</Badge>
+                  <h2 className="mt-3 font-display text-lg font-semibold text-counsly-ink leading-tight pr-6">{cleanCollegeName(college.name)}</h2>
+                </div>
+                <p className="mt-2 text-xs text-counsly-muted">{college.district}</p>
+              </div>
             ))}
           </div>
-        ))}
-        <div>
-          {premiumRows.map((row) => (
-            <div className="grid border-b border-counsly-line last:border-b-0" key={row.label} style={template}>
+          {rows.map((row) => (
+            <div className="grid border-b border-counsly-line last:border-b-0 hover:bg-counsly-soft/30 transition-colors" key={row.label} style={template}>
               <p className="p-4 text-sm font-medium text-counsly-body">{row.label}</p>
               {colleges.map((college) => (
                 <p className="border-l border-counsly-line p-4 font-mono text-sm text-counsly-ink" key={`${row.label}-${college.code}`}>
@@ -243,26 +261,44 @@ function CompareInner() {
               ))}
             </div>
           ))}
-        </div>
-      </Surface>
+          <div>
+            {premiumRows.map((row) => (
+              <div className="grid border-b border-counsly-line last:border-b-0 hover:bg-counsly-soft/30 transition-colors" key={row.label} style={template}>
+                <p className="p-4 text-sm font-medium text-counsly-body">{row.label}</p>
+                {colleges.map((college) => (
+                  <p className="border-l border-counsly-line p-4 font-mono text-sm text-counsly-ink" key={`${row.label}-${college.code}`}>
+                    {row.value(college)}
+                  </p>
+                ))}
+              </div>
+            ))}
+          </div>
+        </Surface>
+      )}
 
-      <Surface className="space-y-4 p-6 animate-fade-in" tone="soft">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-counsly-coral" />
-          <Badge tone="neutral">Rule-based summary</Badge>
-        </div>
-        <p className="text-sm leading-7 text-counsly-body">{explanation}</p>
-      </Surface>
+      {colleges.length > 0 && (
+        <Surface className="space-y-4 p-6 animate-fade-in" tone="soft">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-counsly-coral animate-pulse" />
+            <Badge tone="coral">Rule-based summary</Badge>
+          </div>
+          <p className="text-sm leading-7 text-counsly-body">{explanation}</p>
+        </Surface>
+      )}
 
-      <Surface className="space-y-3 p-5" tone="paper">
-        <h2 className="font-display text-3xl text-counsly-ink">Saved compare sessions</h2>
+      <Surface className="space-y-4 p-5" tone="paper">
+        <h2 className="font-display text-2xl text-counsly-ink font-semibold">Saved compare sessions</h2>
         <div className="grid gap-2 md:grid-cols-2">
-          {sessions.length ? sessions.map((session) => (
-            <Link className="flex items-center justify-between rounded-lg border border-counsly-line bg-counsly-soft p-3 text-sm text-counsly-body" href={session.href} key={session.id}>
-              <span>{session.title}</span>
-              <span className="text-counsly-muted">Resume</span>
-            </Link>
-          )) : <p className="text-sm text-counsly-body">Name this compare pair to put it on the dashboard.</p>}
+          {sessions.length ? (
+            sessions.map((session) => (
+              <Link className="flex items-center justify-between rounded-lg border border-counsly-line bg-counsly-soft p-3.5 text-sm text-counsly-body hover:border-counsly-coral transition-colors" href={session.href} key={session.id}>
+                <span className="font-medium text-counsly-ink">{session.title}</span>
+                <span className="text-xs font-semibold text-counsly-coral">Resume</span>
+              </Link>
+            ))
+          ) : (
+            <p className="text-sm text-counsly-muted p-2">Name this compare pair to save it to your workspace dashboard.</p>
+          )}
         </div>
       </Surface>
     </div>

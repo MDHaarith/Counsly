@@ -1,6 +1,9 @@
+from types import SimpleNamespace
+
 from backend.routes.compare import build_structural_explanation
+from backend.routes.explore import community_seat_payload
 from backend.routes.guidance import MIN_ELIGIBLE_AGGREGATE, compute_aggregate
-from backend.schemas import CollegeCompareColumn
+from backend.schemas import CollegeCompareColumn, CollegeSearchQuery, CompareRequest
 
 
 def make_column(name: str) -> CollegeCompareColumn:
@@ -26,6 +29,29 @@ def make_column(name: str) -> CollegeCompareColumn:
 
 def test_aggregate_gate_block():
     assert compute_aggregate(40, 20, 10) < MIN_ELIGIBLE_AGGREGATE
+
+
+def test_aggregate_gate_matches_frontend_threshold():
+    assert MIN_ELIGIBLE_AGGREGATE == 78.0
+    assert compute_aggregate(40, 20, 18) >= MIN_ELIGIBLE_AGGREGATE
+
+
+def test_search_and_compare_requests_preserve_community():
+    search_req = CollegeSearchQuery(branch_code="CS", community="bc")
+    compare_req = CompareRequest(college_codes=["1", "2006"], branch_codes=["CS"], community="sc")
+
+    assert search_req.community == "BC"
+    assert compare_req.community == "SC"
+
+
+def test_community_seat_payload_hides_other_communities():
+    seats = SimpleNamespace(oc=11, bc=22, bcm=3, mbc=18, sc=12, sca=2, st=1, total=69)
+
+    payload = community_seat_payload(seats, "bc")
+
+    assert payload == {"community": "BC", "available": 22, "total": 69}
+    assert "oc" not in payload
+    assert "sc" not in payload
 
 
 def test_structural_explanation_uses_top_two_differences():

@@ -225,9 +225,9 @@ def main():
             # Geocoding lookup
             cleaned_col_name = clean_name(name)
             geo_match = geo_lookup.get(cleaned_col_name)
-            lat = geo_match["lat"] if geo_match else None
-            lon = geo_match["lon"] if geo_match else None
-            coord_approx = False if geo_match else True
+            lat = c.get("latitude") if c.get("latitude") is not None else (geo_match["lat"] if geo_match else None)
+            lon = c.get("longitude") if c.get("longitude") is not None else (geo_match["lon"] if geo_match else None)
+            coord_approx = False if (geo_match or c.get("latitude") is not None) else True
             
             # Type classification
             col_type = classify_college_type(name)
@@ -250,17 +250,38 @@ def main():
             has_nba = any(course.get("NBA_Accredited", "").strip().lower() == "yes" for course in courses)
             
             # Railway station and distance
-            rail_station = c.get("Nearest_Railway_Station")
+            rail_station = c.get("nearest_railway_station") or c.get("Nearest_Railway_Station")
             rail_station = rail_station.strip() if rail_station else None
             
             rail_dist = None
-            raw_dist = c.get("Distance_in_KMS_from_Nearest_Railway_Station")
-            if raw_dist is not None and raw_dist != "-":
-                try:
-                    rail_dist = float(raw_dist)
-                except Exception:
-                    pass
-                    
+            if c.get("nearest_railway_distance_km") is not None:
+                rail_dist = c.get("nearest_railway_distance_km")
+            else:
+                raw_dist = c.get("Distance_in_KMS_from_Nearest_Railway_Station")
+                if raw_dist is not None and raw_dist != "-":
+                    try:
+                        rail_dist = float(raw_dist)
+                    except Exception:
+                        pass
+            
+            nearest_railway_station_latitude = c.get("nearest_railway_station_latitude")
+            nearest_railway_station_longitude = c.get("nearest_railway_station_longitude")
+            
+            nearest_express_station = c.get("nearest_express_station")
+            nearest_express_station_latitude = c.get("nearest_express_station_latitude")
+            nearest_express_station_longitude = c.get("nearest_express_station_longitude")
+            nearest_express_station_distance_km = c.get("nearest_express_station_distance_km")
+            
+            nearest_bus_station = c.get("nearest_bus_station")
+            nearest_bus_station_latitude = c.get("nearest_bus_station_latitude")
+            nearest_bus_station_longitude = c.get("nearest_bus_station_longitude")
+            nearest_bus_station_distance_km = c.get("nearest_bus_station_distance_km")
+            
+            nearest_bus_stop = c.get("nearest_bus_stop")
+            nearest_bus_stop_latitude = c.get("nearest_bus_stop_latitude")
+            nearest_bus_stop_longitude = c.get("nearest_bus_stop_longitude")
+            nearest_bus_stop_distance_km = c.get("nearest_bus_stop_distance_km")
+            
             # Fees calculation
             def parse_fee(val):
                 if val is None or val == "-":
@@ -293,14 +314,22 @@ def main():
                     hostel_available, transport_available, website, is_autonomous,
                     nba_accredited, coordinates_approximate, nearest_railway_station,
                     nearest_railway_distance_km, fee_structure_annual, placement_rate_pct,
-                    details_raw
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    details_raw,
+                    nearest_railway_station_latitude, nearest_railway_station_longitude,
+                    nearest_express_station, nearest_express_station_latitude, nearest_express_station_longitude, nearest_express_station_distance_km,
+                    nearest_bus_station, nearest_bus_station_latitude, nearest_bus_station_longitude, nearest_bus_station_distance_km,
+                    nearest_bus_stop, nearest_bus_stop_latitude, nearest_bus_stop_longitude, nearest_bus_stop_distance_km
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 code, name, district, col_type, addr, lat, lon,
                 hostel, transport, website, is_auto,
                 has_nba, coord_approx, rail_station,
                 rail_dist, annual_fee if annual_fee > 0 else None, placement_pct,
-                json.dumps(c)
+                json.dumps(c),
+                nearest_railway_station_latitude, nearest_railway_station_longitude,
+                nearest_express_station, nearest_express_station_latitude, nearest_express_station_longitude, nearest_express_station_distance_km,
+                nearest_bus_station, nearest_bus_station_latitude, nearest_bus_station_longitude, nearest_bus_station_distance_km,
+                nearest_bus_stop, nearest_bus_stop_latitude, nearest_bus_stop_longitude, nearest_bus_stop_distance_km
             ))
             
             kept_colleges.add(code)

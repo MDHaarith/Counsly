@@ -19,9 +19,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Download, FileDown, GripVertical, Plus, Save, UploadCloud } from "lucide-react";
+import { Download, FileDown, GripVertical, Plus, Save, UploadCloud, FileStack } from "lucide-react";
 
-import { Badge, PageHeader, Surface } from "@/components/ui";
+import { Badge, PageHeader, Surface, EmptyState, StatusToast } from "@/components/ui";
 import { FeatureGate } from "@/components/feature-gate";
 import { useApp } from "@/app/AppContext";
 import {
@@ -163,13 +163,25 @@ export default function ChoicesPage() {
   const [snapshots, setSnapshots] = useState<SnapshotRecord[]>([]);
   const [pendingImport, setPendingImport] = useState<ChoiceRow[]>([]);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [syncStatus, setSyncStatus] = useState("Using preview rows until a workspace choice list loads.");
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "default" } | null>(null);
+  
   const fileRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const activeChoice = useMemo(() => choices.find((choice) => choice.id === activeId), [activeId, choices]);
+
+  const showToast = (message: string, tone: "success" | "error" | "default" = "default") => {
+    setToast({ message, tone });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     let active = true;
@@ -185,9 +197,9 @@ export default function ChoicesPage() {
           itemCount: item.item_count,
           title: item.title,
         })));
-        setSyncStatus(rows.length ? "Workspace choices loaded from the API." : "Workspace list is empty. Preview rows stay editable.");
+        showToast(rows.length ? "Choices loaded." : "Workspace list is empty.", "success");
       })
-      .catch(() => setSyncStatus("API unavailable. Preview mode keeps ordering, notes, and exports usable."));
+      .catch(() => showToast("Working in local preview mode.", "default"));
 
     return () => {
       active = false;
@@ -201,9 +213,9 @@ export default function ChoicesPage() {
   const syncOrder = async (rows: ChoiceRow[]) => {
     try {
       await reorderChoices(rows);
-      setSyncStatus(`Saved ${rows.length} priorities to the workspace.`);
+      showToast(`Filing order saved to cloud.`, "success");
     } catch {
-      setSyncStatus("Priority order changed locally. API sync is waiting for a reachable workspace.");
+      showToast("API unreachable. Filing order saved locally.", "error");
     }
   };
 
@@ -211,9 +223,9 @@ export default function ChoicesPage() {
     if (!choice.backendId) return;
     try {
       await updateChoice(choice);
-      setSyncStatus(`Saved ${choice.code} ${choice.branchCode} metadata.`);
+      showToast("Metadata saved to cloud.", "success");
     } catch {
-      setSyncStatus("Notes and category changed locally. Metadata sync did not reach the API.");
+      showToast("Notes saved locally (sync pending).", "default");
     }
   };
 
@@ -241,9 +253,11 @@ export default function ChoicesPage() {
       const saved = await createChoiceSnapshot(title);
       setSnapshots((current) => [{ id: saved.id, itemCount: saved.item_count, title: saved.title }, ...current]);
       setSnapshot(`${title} saved to the workspace with ${saved.item_count} rows.`);
+      showToast(`Snapshot "${title}" saved.`, "success");
     } catch {
       setSnapshots((current) => [{ title, rows: choices.map((choice) => ({ ...choice })) }, ...current]);
-      setSnapshot(`${title} saved locally with ${choices.length} rows and notes at ${new Date().toLocaleTimeString()}.`);
+      setSnapshot(`${title} saved locally at ${new Date().toLocaleTimeString()}.`);
+      showToast(`Snapshot "${title}" saved locally.`, "success");
     }
   };
 
@@ -368,164 +382,190 @@ export default function ChoicesPage() {
 
   return (
     <FeatureGate>
-    <div className="space-y-6">
-      <PageHeader
-        actions={
-          <>
-            <button className="button-secondary" onClick={() => fileRef.current?.click()} type="button">
-              <UploadCloud className="h-4 w-4" /> Import CSV
-            </button>
-            <button className="button-secondary" onClick={exportCsv} type="button">
-              <Download className="h-4 w-4" /> Export CSV
-            </button>
-            <button className="button-secondary" onClick={exportPdf} type="button">
-              <FileDown className="h-4 w-4" /> Export PDF
-            </button>
-            <button className="button-primary" onClick={saveSnapshot} type="button">
-              <Save className="h-4 w-4" /> Save snapshot
-            </button>
-          </>
-        }
-        description="Drag rows on desktop, edit one active row at a time on mobile, keep notes visible, and preserve snapshots before filing."
-        eyebrow="Primary surface"
-        title="Choice filing workspace"
-      />
-      <input accept=".csv,text/csv" className="hidden" onInput={importCsv} ref={fileRef} type="file" />
+      <div className="space-y-8 relative">
+        {toast && (
+          <div className="fixed bottom-24 right-6 z-50 animate-slide-up">
+            <StatusToast message={toast.message} tone={toast.tone} />
+          </div>
+        )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <Surface className="space-y-3 p-4 md:p-5" tone="paper">
-          <p className="rounded-lg bg-counsly-soft p-3 text-sm text-counsly-body">{syncStatus}</p>
-          <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} sensors={sensors}>
-            <SortableContext items={choices.map((choice) => choice.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3">
-                {choices.map((choice) => (
-                  <ChoiceItem
-                    activeId={activeId}
-                    choice={choice}
-                    key={choice.id}
-                    onChange={changeChoice}
-                    onJump={jumpChoice}
-                    onPersist={persistChoice}
-                    onSelect={setActiveId}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </Surface>
+        <PageHeader
+          actions={
+            <>
+              <button className="button-secondary" onClick={() => fileRef.current?.click()} type="button">
+                <UploadCloud className="h-4 w-4" /> Import CSV
+              </button>
+              <button className="button-secondary" onClick={exportCsv} type="button">
+                <Download className="h-4 w-4" /> Export CSV
+              </button>
+              <button className="button-secondary" onClick={exportPdf} type="button">
+                <FileDown className="h-4 w-4" /> Export PDF
+              </button>
+              <button className="button-primary" onClick={saveSnapshot} type="button">
+                <Save className="h-4 w-4" /> Save snapshot
+              </button>
+            </>
+          }
+          description="Manage, reorder, and snapshot your choice filing list. Export as CSV or official PDF."
+          eyebrow="Primary surface"
+          title="Choice filing workspace"
+        />
+        <input accept=".csv,text/csv" className="hidden" onInput={importCsv} ref={fileRef} type="file" />
 
-        <div className="space-y-4">
-          <Surface className="space-y-4 p-5" tone="soft">
-            <Badge tone="neutral">Active row</Badge>
-            {activeChoice ? (
-              <>
-                <h2 className="font-display text-3xl text-counsly-ink">{cleanCollegeName(activeChoice.name)}</h2>
-                <p className="text-sm leading-6 text-counsly-body">{activeChoice.notes}</p>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <span className="rounded-lg bg-counsly-canvas p-3 text-counsly-muted">Cutoff <strong className="block font-mono text-counsly-ink mt-1 text-lg">{activeChoice.cutoff}</strong></span>
-                  <span className="rounded-lg bg-counsly-canvas p-3 text-counsly-muted">Seats <strong className="block font-mono text-counsly-ink mt-1 text-lg">{activeChoice.seats}</strong></span>
-                </div>
-              </>
-            ) : null}
+        {choices.length === 0 ? (
+          <Surface className="p-10 flex flex-col items-center justify-center min-h-[350px]" tone="paper">
+            <EmptyState
+              icon={<FileStack className="h-8 w-8" />}
+              title="Your Choice List is Empty"
+              description="Browse the College Explorer or Recommendations to find colleges and add them to your filing workspace."
+              action={
+                <Link href="/explore" className="button-primary mt-4">
+                  <Plus className="h-4 w-4" /> Browse Colleges
+                </Link>
+              }
+            />
           </Surface>
-          <Surface className="space-y-3 p-5" tone="soft">
-            <p className="eyebrow">Snapshot status</p>
-            <p className="text-sm leading-6 text-counsly-body">{snapshot}</p>
-            <div className="space-y-2">
-              {snapshots.map((item) => (
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <Surface className="space-y-3 p-4 md:p-5" tone="paper">
+              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} sensors={sensors}>
+                <SortableContext items={choices.map((choice) => choice.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-3">
+                    {choices.map((choice) => (
+                      <ChoiceItem
+                        activeId={activeId}
+                        choice={choice}
+                        key={choice.id}
+                        onChange={changeChoice}
+                        onJump={jumpChoice}
+                        onPersist={persistChoice}
+                        onSelect={setActiveId}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </Surface>
+
+            <div className="space-y-4">
+              <Surface className="space-y-4 p-5 animate-fade-in" tone="soft">
+                <Badge tone="neutral">Active row</Badge>
+                {activeChoice ? (
+                  <>
+                    <h2 className="font-display text-3xl text-counsly-ink">{cleanCollegeName(activeChoice.name)}</h2>
+                    <p className="text-sm leading-6 text-counsly-body">{activeChoice.notes || "No custom notes entered for this choice."}</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <span className="rounded-lg bg-counsly-canvas p-3 text-counsly-muted">Cutoff <strong className="block font-mono text-counsly-ink mt-1 text-lg">{activeChoice.cutoff}</strong></span>
+                      <span className="rounded-lg bg-counsly-canvas p-3 text-counsly-muted">Seats <strong className="block font-mono text-counsly-ink mt-1 text-lg">{activeChoice.seats}</strong></span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-counsly-muted">Select a college to view details.</p>
+                )}
+              </Surface>
+              
+              <Surface className="space-y-3 p-5" tone="soft">
+                <p className="eyebrow">Snapshot status</p>
+                <p className="text-sm leading-6 text-counsly-body">{snapshot}</p>
+                <div className="space-y-2">
+                  {snapshots.map((item) => (
+                    <button
+                      className="flex w-full items-center justify-between rounded-lg border border-counsly-line bg-counsly-canvas p-3 text-left text-sm text-counsly-body hover:border-counsly-coral transition"
+                      key={item.title}
+                      onClick={async () => {
+                        if (item.id) {
+                          try {
+                            await restoreChoiceSnapshot(item.id);
+                            const rows = await fetchChoices();
+                            setChoices(rows);
+                            setActiveId(rows[0]?.id ?? "");
+                            setSnapshot(`${item.title} restored from the workspace.`);
+                            showToast(`${item.title} restored.`, "success");
+                            return;
+                          } catch {
+                            setSnapshot(`${item.title} could not be restored.`);
+                            showToast("Error restoring snapshot.", "error");
+                          }
+                        }
+                        if (item.rows) {
+                          setChoices(item.rows.map((row) => ({ ...row })));
+                          setSnapshot(`${item.title} restored as current list.`);
+                          showToast(`${item.title} restored.`, "success");
+                        }
+                      }}
+                      type="button"
+                    >
+                      <span>{item.title}</span>
+                      <span className="text-xs text-counsly-muted">{item.itemCount ? `${item.itemCount} rows` : "Restore"}</span>
+                    </button>
+                  ))}
+                </div>
+                <Link className="button-secondary w-full" href="/explore">
+                  <Plus className="h-4 w-4" /> Add college from explorer
+                </Link>
+              </Surface>
+            </div>
+          </div>
+        )}
+
+        {pendingImport.length > 0 && (
+          <Surface className="space-y-4 p-5" tone="soft">
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+              <div>
+                <p className="eyebrow">CSV import preview</p>
+                <h2 className="font-display text-3xl text-counsly-ink">{pendingImport.length} rows ready to append</h2>
+              </div>
+              <div className="flex gap-2">
+                <button className="button-secondary" onClick={() => setPendingImport([])} type="button">Cancel</button>
                 <button
-                  className="flex w-full items-center justify-between rounded-lg border border-counsly-line bg-counsly-canvas p-3 text-left text-sm text-counsly-body"
-                  key={item.title}
+                  className="button-primary"
                   onClick={async () => {
-                    if (item.id) {
+                    if (pendingFile) {
                       try {
-                        await restoreChoiceSnapshot(item.id);
+                        await uploadChoiceCsv(pendingFile);
                         const rows = await fetchChoices();
                         setChoices(rows);
                         setActiveId(rows[0]?.id ?? "");
-                        setSnapshot(`${item.title} restored from the workspace.`);
+                        showToast(`Imported ${pendingImport.length} rows.`, "success");
+                        setPendingImport([]);
+                        setPendingFile(null);
                         return;
                       } catch {
-                        setSnapshot(`${item.title} could not be restored from the API.`);
+                        showToast("API error. Applied preview locally.", "default");
                       }
                     }
-                    if (item.rows) {
-                      setChoices(item.rows.map((row) => ({ ...row })));
-                      setSnapshot(`${item.title} restored as the local current list.`);
-                    }
+                    setChoices((rows) => resequence([...rows, ...pendingImport]).slice(0, 300));
+                    setPendingImport([]);
+                    setPendingFile(null);
                   }}
                   type="button"
                 >
-                  <span>{item.title}</span>
-                  <span className="text-xs text-counsly-muted">{item.itemCount ? `${item.itemCount} rows` : "Restore"}</span>
+                  Apply import
                 </button>
+              </div>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {pendingImport.slice(0, 4).map((choice) => (
+                <p className="rounded-lg bg-counsly-canvas p-3 text-sm text-counsly-body" key={choice.id}>
+                  {choice.priority}. {choice.code} {choice.branchCode} <span className="text-counsly-muted">({choice.fitBand})</span>
+                </p>
               ))}
             </div>
-            <Link className="button-secondary w-full" href="/explore">
-              <Plus className="h-4 w-4" /> Add college from explorer
-            </Link>
           </Surface>
+        )}
+
+        <div className="sticky bottom-24 z-20 flex gap-2 rounded-2xl border border-counsly-line bg-counsly-canvas/95 p-2 shadow-[0_18px_45px_rgba(20,20,19,0.14)] backdrop-blur md:hidden">
+          <Link className="button-secondary min-w-0 flex-1 px-3 text-center flex items-center justify-center" href="/explore">
+            Add
+          </Link>
+          <button className="button-primary min-w-0 flex-1 px-3" onClick={saveSnapshot} type="button">
+            Snapshot
+          </button>
+          <button className="button-secondary min-w-0 flex-1 px-3" onClick={exportPdf} type="button">
+            PDF
+          </button>
         </div>
       </div>
-
-      {pendingImport.length > 0 && (
-        <Surface className="space-y-4 p-5" tone="soft">
-          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-            <div>
-              <p className="eyebrow">CSV import preview</p>
-              <h2 className="font-display text-3xl text-counsly-ink">{pendingImport.length} rows ready to append</h2>
-            </div>
-            <div className="flex gap-2">
-              <button className="button-secondary" onClick={() => setPendingImport([])} type="button">Cancel</button>
-              <button
-                className="button-primary"
-                onClick={async () => {
-                  if (pendingFile) {
-                    try {
-                      await uploadChoiceCsv(pendingFile);
-                      const rows = await fetchChoices();
-                      setChoices(rows);
-                      setActiveId(rows[0]?.id ?? "");
-                      setSyncStatus(`Imported ${pendingImport.length} rows through the workspace API.`);
-                      setPendingImport([]);
-                      setPendingFile(null);
-                      return;
-                    } catch {
-                      setSyncStatus("CSV upload did not reach the API. Applying the parsed preview locally.");
-                    }
-                  }
-                  setChoices((rows) => resequence([...rows, ...pendingImport]).slice(0, 300));
-                  setPendingImport([]);
-                  setPendingFile(null);
-                }}
-                type="button"
-              >
-                Apply import
-              </button>
-            </div>
-          </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            {pendingImport.slice(0, 4).map((choice) => (
-              <p className="rounded-lg bg-counsly-canvas p-3 text-sm text-counsly-body" key={choice.id}>
-                {choice.priority}. {choice.code} {choice.branchCode} <span className="text-counsly-muted">({choice.fitBand})</span>
-              </p>
-            ))}
-          </div>
-        </Surface>
-      )}
-
-      <div className="sticky bottom-24 z-20 flex gap-2 rounded-2xl border border-counsly-line bg-counsly-canvas/95 p-2 shadow-[0_18px_45px_rgba(20,20,19,0.14)] backdrop-blur md:hidden">
-        <Link className="button-secondary min-w-0 flex-1 px-3" href="/explore">
-          Add
-        </Link>
-        <button className="button-primary min-w-0 flex-1 px-3" onClick={saveSnapshot} type="button">
-          Snapshot
-        </button>
-        <button className="button-secondary min-w-0 flex-1 px-3" onClick={exportPdf} type="button">
-          PDF
-        </button>
-      </div>
-    </div>
     </FeatureGate>
   );
 }

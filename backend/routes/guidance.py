@@ -11,7 +11,7 @@ from backend.routes.rate_limiter import rate_limit
 
 router = APIRouter(prefix="/guidance", tags=["guidance"])
 
-MIN_ELIGIBLE_AGGREGATE = 90.0
+MIN_ELIGIBLE_AGGREGATE = 78.0
 
 
 def compute_aggregate(maths: int, physics: int, chemistry: int) -> float:
@@ -31,7 +31,7 @@ def run_onboarding(
             eligible=False,
             message=(
                 "Under the official DTE Tamil Nadu guidelines, candidates with a cumulative "
-                "aggregate mark below 90 out of 200 are ineligible for the 2027 counseling flow "
+                "aggregate mark below 78 out of 200 are ineligible for the 2027 counseling flow "
                 "in Counsly. Review official notices; recommendations and choices stay locked."
             ),
             onboarding_completed=False,

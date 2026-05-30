@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, delete
 from typing import List, Optional
 from backend.database import get_db
-from backend.models import User, Workspace, UserCollegePreference, College, Branch, ShortlistSnapshot, ShortlistSnapshotItem, WorkspaceActivity
+from backend.models import User, Workspace, UserCollegePreference, College, Branch, ShortlistSnapshot, ShortlistSnapshotItem, WorkspaceActivity, CollegeBranch
 from backend.schemas import ChoiceItemResponse, ChoiceItemCreate, ReorderRequest, SnapshotCreate, SnapshotResponse
 from backend.routes.auth import get_current_user
 
@@ -104,6 +104,22 @@ def reorder_choices(req: ReorderRequest, current_user: User = Depends(get_curren
     # Verify bounds
     if len(updates) > 300:
         raise HTTPException(status_code=400, detail="Cannot exceed maximum of 300 items")
+
+    # Pre-validate all college and branch codes to ensure database integrity
+    college_codes = {item.college_code for item in updates}
+    branch_codes = {item.branch_code for item in updates}
+    
+    existing_colleges = db.query(College.code).filter(College.code.in_(college_codes)).all()
+    existing_college_codes = {c[0] for c in existing_colleges}
+    
+    existing_branches = db.query(Branch.code).filter(Branch.code.in_(branch_codes)).all()
+    existing_branch_codes = {b[0] for b in existing_branches}
+    
+    for item in updates:
+        if item.college_code not in existing_college_codes:
+            raise HTTPException(status_code=400, detail=f"Invalid college code: {item.college_code}")
+        if item.branch_code not in existing_branch_codes:
+            raise HTTPException(status_code=400, detail=f"Invalid branch code: {item.branch_code}")
         
     # Wipe existing
     db.execute(delete(UserCollegePreference).where(UserCollegePreference.workspace_id == ws.id))
@@ -115,10 +131,10 @@ def reorder_choices(req: ReorderRequest, current_user: User = Depends(get_curren
             workspace_id=ws.id,
             preference_group="primary",
             priority=index,
-            college_code=item["college_code"],
-            branch_code=item["branch_code"],
-            category=item.get("category", "Moderate"),
-            notes=item.get("notes")
+            college_code=item.college_code,
+            branch_code=item.branch_code,
+            category=item.category or "Moderate",
+            notes=item.notes
         )
         db.add(pref)
         inserted_prefs.append(pref)
@@ -328,13 +344,39 @@ async def upload_choices_csv(file: UploadFile = File(...), current_user: User = 
     if not ws:
         raise HTTPException(status_code=404, detail="Workspace environment not initialized")
         
-    content = await file.read()
-    string_data = content.decode("utf-8")
+    # Enforce maximum file size of 1MB to prevent server memory exhaustion
+    max_file_size = 1 * 1024 * 1024  # 1MB
+    chunk_size = 8192
+    total_read = 0
+    content_chunks = []
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_read += len(chunk)
+        if total_read > max_file_size:
+            raise HTTPException(status_code=400, detail="File size exceeds the limit of 1MB.")
+        content_chunks.append(chunk)
+    content = b"".join(content_chunks)
+
+    # Robust UTF-8 with latin-1 fallback encoding decoding
+    try:
+        string_data = content.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            string_data = content.decode("latin-1")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid file encoding. Only UTF-8 or standard ASCII encoded CSVs are supported.")
+
     f_csv = StringIO(string_data)
     reader = csv.reader(f_csv)
     
     # Parse headers/rows
-    rows = list(reader)
+    try:
+        rows = list(reader)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid CSV format.")
+        
     if not rows:
         raise HTTPException(status_code=400, detail="Uploaded CSV file is empty")
         
@@ -343,7 +385,7 @@ async def upload_choices_csv(file: UploadFile = File(...), current_user: User = 
     college_idx, branch_idx, notes_idx, cat_idx = -1, -1, -1, -1
     for idx, col in enumerate(header):
         col_clean = col.lower().strip()
-        if "college" in col_clean or "code" in col_clean and college_idx == -1:
+        if ("college" in col_clean or "code" in col_clean) and college_idx == -1:
             college_idx = idx
         elif "branch" in col_clean or "course" in col_clean:
             branch_idx = idx
@@ -357,7 +399,7 @@ async def upload_choices_csv(file: UploadFile = File(...), current_user: User = 
         college_idx = 0
         branch_idx = 1
         
-    valid_choices = []
+    extracted_rows = []
     # Skip header
     data_rows = rows[1:] if len(rows) > 1 else rows
     
@@ -368,18 +410,25 @@ async def upload_choices_csv(file: UploadFile = File(...), current_user: User = 
         branch_code = r[branch_idx].strip()
         notes = r[notes_idx].strip() if notes_idx != -1 and len(r) > notes_idx else None
         cat = r[cat_idx].strip() if cat_idx != -1 and len(r) > cat_idx else "Moderate"
-        
-        # Verify they exist
-        c_exists = db.query(College).filter(College.code == college_code).first()
-        b_exists = db.query(Branch).filter(Branch.code == branch_code).first()
-        
-        if c_exists and b_exists:
-            valid_choices.append({
-                "college_code": college_code,
-                "branch_code": branch_code,
-                "notes": notes,
-                "category": cat if cat in ["Safe", "Moderate", "Ambitious"] else "Moderate"
-            })
+        extracted_rows.append((college_code, branch_code, notes, cat))
+
+    # O(1) DB roundtrip batch check: query CollegeBranch mappings for all extracted pairs
+    valid_choices = []
+    if extracted_rows:
+        unique_colleges = {row[0] for row in extracted_rows}
+        college_branches = db.query(CollegeBranch.college_code, CollegeBranch.branch_code).filter(
+            CollegeBranch.college_code.in_(unique_colleges)
+        ).all()
+        valid_pairs = {(cb[0], cb[1]) for cb in college_branches}
+
+        for college_code, branch_code, notes, cat in extracted_rows:
+            if (college_code, branch_code) in valid_pairs:
+                valid_choices.append({
+                    "college_code": college_code,
+                    "branch_code": branch_code,
+                    "notes": notes,
+                    "category": cat if cat in ["Safe", "Moderate", "Ambitious"] else "Moderate"
+                })
             
     if not valid_choices:
         raise HTTPException(status_code=400, detail="No valid college and branch combinations were extracted from the CSV.")

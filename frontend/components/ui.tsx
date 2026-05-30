@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-
-
 export function PageHeader({
   eyebrow,
   title,
@@ -67,3 +65,39 @@ export function Metric({
   );
 }
 
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="empty-state">
+      <div className="empty-state-icon">{icon}</div>
+      <p className="text-sm font-semibold text-counsly-ink">{title}</p>
+      <p className="max-w-xs text-sm text-counsly-muted">{description}</p>
+      {action}
+    </div>
+  );
+}
+
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`skeleton ${className}`} aria-hidden="true" />;
+}
+
+export function StatusToast({
+  message,
+  tone = "default",
+}: {
+  message: string;
+  tone?: "default" | "success" | "error";
+}) {
+  if (!message) return null;
+  const toneClass = tone === "success" ? "status-toast-success" : tone === "error" ? "status-toast-error" : "";
+  return <p className={`status-toast ${toneClass}`}>{message}</p>;
+}

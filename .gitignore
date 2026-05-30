@@ -22,9 +22,14 @@ frontend/out/
 # Runtime artifacts
 *.log
 seeder.log
-counsly.db
+*.db
 *.sqlite
 *.sqlite3
+
+# Agent & CCB Cache
+.agents/
+.ccb/
+.claude/
 
 # Environment
 .env.local

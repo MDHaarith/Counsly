@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from backend.community import resolve_user_community
 from backend.database import get_db
 from backend.models import Branch, College, CollegeCompareHistory, CutoffData, User, WorkspaceActivity
 from backend.routes.auth import get_current_user
@@ -49,7 +50,10 @@ async def compare_colleges(req: CompareRequest, current_user: User = Depends(get
         raise HTTPException(status_code=400, detail="Must select at least 2 colleges to compare.")
     if len(req.college_codes) > 4:
         raise HTTPException(status_code=400, detail="Can compare at most 4 colleges side-by-side.")
+    if not req.branch_codes:
+        raise HTTPException(status_code=400, detail="Must select at least 1 branch to compare.")
 
+    user_community = resolve_user_community(req.community, current_user, db)
     columns = []
 
     for i, c_code in enumerate(req.college_codes):
@@ -65,7 +69,7 @@ async def compare_colleges(req: CompareRequest, current_user: User = Depends(get
             and_(
                 CutoffData.college_code == c_code,
                 CutoffData.branch_code == b_code,
-                CutoffData.community == "OC",
+                CutoffData.community == user_community,
             )
         ).order_by(CutoffData.year.desc()).limit(3).all()
         cutoff = cutoff_rows[0] if cutoff_rows else None

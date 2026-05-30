@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { TimerReset, Home, Sparkles, FileStack, Compass, LogOut } from "lucide-react";
+import { TimerReset, Home, Sparkles, FileStack, Compass, LogOut, MapPin, GitCompare, User } from "lucide-react";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
@@ -66,7 +66,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-4">
-              <span className="hidden text-sm font-medium text-counsly-muted xl:inline">{user?.name}</span>
+              <Link 
+                href="/profile/edit" 
+                className="text-sm font-medium text-counsly-muted hover:text-counsly-ink flex items-center gap-1.5 transition"
+              >
+                <User className="h-4 w-4 text-counsly-coral" />
+                <span>{user?.name || "Student Profile"}</span>
+              </Link>
               <button 
                 className="button-secondary min-h-9 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 hover:bg-counsly-soft transition" 
                 onClick={logout} 
@@ -78,7 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Mobile Shell Bottom Navigation */}
-          <nav className="mobile-shell fixed bottom-3 left-3 right-3 z-40 grid grid-cols-4 gap-1 rounded-2xl border border-counsly-line bg-counsly-canvas/95 p-2 shadow-[0_18px_45px_rgba(20,20,19,0.15)] backdrop-blur md:hidden">
+          <nav className="mobile-shell fixed bottom-3 left-3 right-3 z-40 grid grid-cols-6 gap-0.5 rounded-2xl border border-counsly-line bg-counsly-canvas/95 p-1.5 shadow-[0_18px_45px_rgba(20,20,19,0.15)] backdrop-blur md:hidden">
             <Link 
               href="/dashboard" 
               className={`mobile-nav-link flex flex-col items-center justify-center py-1 text-center rounded-xl transition ${
@@ -86,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <Home className="h-5 w-5" />
-              <span className="text-[10px] font-medium mt-1">Home</span>
+              <span className="text-[10px] font-medium mt-0.5">Home</span>
             </Link>
             <Link 
               href="/recommendations" 
@@ -95,7 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <Sparkles className="h-5 w-5" />
-              <span className="text-[10px] font-medium mt-1">Recs</span>
+              <span className="text-[10px] font-medium mt-0.5">Recs</span>
             </Link>
             <Link 
               href="/choices" 
@@ -104,7 +110,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <FileStack className="h-5 w-5" />
-              <span className="text-[10px] font-medium mt-1">Choices</span>
+              <span className="text-[10px] font-medium mt-0.5">Choices</span>
+            </Link>
+            <Link 
+              href="/compare" 
+              className={`mobile-nav-link flex flex-col items-center justify-center py-1 text-center rounded-xl transition ${
+                pathname === "/compare" ? "mobile-nav-link-active bg-counsly-soft text-counsly-ink" : "text-counsly-muted"
+              }`}
+            >
+              <GitCompare className="h-5 w-5" />
+              <span className="text-[10px] font-medium mt-0.5">Compare</span>
             </Link>
             <Link 
               href="/explore" 
@@ -113,7 +128,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <Compass className="h-5 w-5" />
-              <span className="text-[10px] font-medium mt-1">Explore</span>
+              <span className="text-[10px] font-medium mt-0.5">Explore</span>
+            </Link>
+            <Link 
+              href="/maps" 
+              className={`mobile-nav-link flex flex-col items-center justify-center py-1 text-center rounded-xl transition ${
+                pathname === "/maps" ? "mobile-nav-link-active bg-counsly-soft text-counsly-ink" : "text-counsly-muted"
+              }`}
+            >
+              <MapPin className="h-5 w-5" />
+              <span className="text-[10px] font-medium mt-0.5">Maps</span>
             </Link>
           </nav>
         </>

@@ -30,7 +30,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        display: ["Copernicus", "Georgia", "serif"],
+        display: ["Fraunces", "Copernicus", "Georgia", "serif"],
         mono: ["monospace"],
       },
       animation: {

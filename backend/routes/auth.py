@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from backend.database import get_db
-from backend.models import User, Workspace, WorkspaceSettings, WorkspaceActivity, DeviceFingerprint
-from backend.schemas import SessionRequest, UserProfile
+from backend.models import User, Workspace, WorkspaceSettings, WorkspaceActivity, DeviceFingerprint, TNEARollNumber
+from backend.schemas import SessionRequest, UserProfile, VerifyRollRequest
 from backend.config import settings
 from backend.routes.rate_limiter import rate_limit
 
@@ -84,7 +84,12 @@ async def get_current_user(request: Request, authorization: str = Header(None), 
             pass  # JWT decode failure — token invalid or expired, proceed unauthenticated
 
     if settings.ALLOW_DEV_AUTH_FALLBACK:
-        if not user:
+        # Strictly restrict dev authentication fallback to localhost loopback connections only
+        is_loopback = False
+        if request.client:
+            is_loopback = request.client.host in {"127.0.0.1", "::1", "localhost"}
+            
+        if is_loopback and not user:
             email = request.query_params.get("google_email")
             if email:
                 user = db.query(User).filter(User.google_email == email).first()
@@ -173,6 +178,22 @@ async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
     resolved_email, resolved_name, resolved_google_id = normalize_session_identity(req, verified_payload)
 
     user = db.query(User).filter(User.google_email == resolved_email).first()
+
+    # Unified Device Fingerprint Abuse Prevention Check
+    if req.device_fingerprint_hash:
+        associated = db.query(DeviceFingerprint).filter(
+            DeviceFingerprint.fingerprint_hash == req.device_fingerprint_hash
+        ).all()
+        associated_user_ids = {fp.user_id for fp in associated}
+        if user and user.id in associated_user_ids:
+            pass
+        else:
+            if len(associated_user_ids) >= 3:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Device fingerprint limit exceeded. Account sharing is strictly restricted."
+                )
+
     is_new = False
 
     if not user:
@@ -223,19 +244,6 @@ async def start_session(req: SessionRequest, db: Session = Depends(get_db)):
         )
         db.add(activity)
     else:
-        # Check device fingerprint block
-        if req.device_fingerprint_hash and user.device_fingerprint_hash:
-            if user.device_fingerprint_hash != req.device_fingerprint_hash:
-                # Check how many accounts use this fingerprint to prevent sharing abuse
-                existing_fingerprints = db.query(DeviceFingerprint).filter(
-                    DeviceFingerprint.fingerprint_hash == req.device_fingerprint_hash
-                ).all()
-                if len(existing_fingerprints) >= 3:
-                    raise HTTPException(
-                        status_code=403,
-                        detail="Device fingerprint limit exceeded. Account sharing is strictly restricted."
-                    )
-        
         user.last_login = datetime.now(timezone.utc)
         if req.device_fingerprint_hash and not user.device_fingerprint_hash:
             user.device_fingerprint_hash = req.device_fingerprint_hash
@@ -292,6 +300,21 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
     resolved_google_id = verified_payload.get("sub") if verified_payload else req.google_id
 
     user = db.query(User).filter(User.google_email == resolved_email).first()
+
+    # Unified Device Fingerprint Abuse Prevention Check
+    if req.device_fingerprint_hash:
+        associated = db.query(DeviceFingerprint).filter(
+            DeviceFingerprint.fingerprint_hash == req.device_fingerprint_hash
+        ).all()
+        associated_user_ids = {fp.user_id for fp in associated}
+        if user and user.id in associated_user_ids:
+            pass
+        else:
+            if len(associated_user_ids) >= 3:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Device fingerprint limit exceeded. Account sharing is strictly restricted."
+                )
 
     if not user:
         user_id = str(uuid.uuid4())
@@ -374,6 +397,18 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
             )
             db.add(w_settings)
             
+    # Record current fingerprint to ledger
+    if req.device_fingerprint_hash:
+        fp_exists = db.query(DeviceFingerprint).filter(
+            DeviceFingerprint.fingerprint_hash == req.device_fingerprint_hash,
+            DeviceFingerprint.user_id == user.id
+        ).first()
+        if not fp_exists:
+            db.add(DeviceFingerprint(
+                fingerprint_hash=req.device_fingerprint_hash,
+                user_id=user.id
+            ))
+            
     db.commit()
     db.refresh(user)
     
@@ -392,4 +427,42 @@ async def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
             "roll_number_verified": user.roll_number_verified,
             "workspace_onboarding_step": user.workspace.onboarding_step if user.workspace else "completed"
         }
+    }
+
+@router.post("/verify-roll")
+def verify_roll_number(req: VerifyRollRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    roll_number = req.roll_number.strip()
+    
+    # Check in official tnea_roll_numbers list
+    official_record = db.query(TNEARollNumber).filter(TNEARollNumber.roll_number == roll_number).first()
+    if not official_record:
+        raise HTTPException(
+            status_code=400,
+            detail="Roll number not found in the official TNEA 2027 database."
+        )
+        
+    # Update current user profile
+    current_user.roll_number = roll_number
+    current_user.roll_number_verified = True
+    
+    # Update user marks if they are set in the official registry
+    ws = current_user.workspace
+    if ws:
+        activity = WorkspaceActivity(
+            workspace_id=ws.id,
+            event_type="roll_number_verified",
+            summary=f"Official TNEA roll number {roll_number} verified. Rank: {official_record.official_rank}, Community: {official_record.community}.",
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(activity)
+        
+    db.commit()
+    
+    return {
+        "success": True,
+        "roll_number": roll_number,
+        "roll_number_verified": True,
+        "student_name": official_record.student_name,
+        "official_rank": official_record.official_rank,
+        "community": official_record.community
     }

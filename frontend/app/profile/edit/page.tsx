@@ -1,17 +1,47 @@
+
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  Award,
+  Check,
+  CheckCircle2,
+  Compass,
+  RefreshCw,
+  User,
+} from "lucide-react";
 
 import { useApp } from "@/app/AppContext";
-import { Badge, PageHeader, Surface } from "@/components/ui";
-import { fetchWorkspaceSettings, updateWorkspaceSettings } from "@/lib/api.mjs";
+import { Badge, PageHeader, Surface, StatusToast } from "@/components/ui";
+import { fetchWorkspaceSettings, updateWorkspaceSettings, verifyRollNumber } from "@/lib/api.mjs";
 import { branches, districts } from "@/lib/product";
+
+const COMMUNITIES = ["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"];
+
+const COMMUNITY_NOTES: Record<string, string> = {
+  OC: "Open Competition",
+  BC: "Backward Class",
+  BCM: "Backward Class Muslim",
+  MBC: "Most Backward Class / Denotified Communities",
+  SC: "Scheduled Caste",
+  SCA: "Scheduled Caste Arunthathiyar",
+  ST: "Scheduled Tribe",
+};
+
+function clampNumber(value: string, max: number) {
+  if (value === "") return 0;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(max, Math.max(0, parsed));
+}
 
 export default function ProfileEditPage() {
   const { user } = useApp();
   const [saved, setSaved] = useState(false);
-  const [status, setStatus] = useState("Loading workspace defaults.");
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "default" } | null>(null);
+  const [hasUnsavedProfile, setHasUnsavedProfile] = useState(false);
+
   const [settings, setSettings] = useState({
     compactView: false,
     defaultDistrict: "Chennai",
@@ -33,6 +63,22 @@ export default function ProfileEditPage() {
     communityRank: "",
   });
 
+  const computedCutoff = useMemo(() => {
+    return Number(studentContext.maths) + Number(studentContext.physics) + Number(studentContext.chemistry);
+  }, [studentContext.chemistry, studentContext.maths, studentContext.physics]);
+
+  const isEligible = computedCutoff >= 78;
+
+  const showToast = (message: string, tone: "success" | "error" | "default" = "default") => {
+    setToast({ message, tone });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   useEffect(() => {
     fetchWorkspaceSettings()
       .then((next) => {
@@ -42,31 +88,28 @@ export default function ProfileEditPage() {
           defaultDistrict: next.defaultDistrict || current.defaultDistrict,
           preferredBranches: next.preferredBranches.length ? next.preferredBranches : current.preferredBranches,
         }));
-        setStatus("Workspace defaults loaded from the API.");
       })
-      .catch(() => setStatus("API defaults unavailable. Changes remain useful in preview mode."));
+      .catch(() => showToast("Using local settings until sync is available.", "default"));
 
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("counsly_student_context");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setStudentContext({
-            chemistry: Number(parsed.chemistry) || 0,
-            community: parsed.community || "OC",
-            maths: Number(parsed.maths) || 0,
-            name: parsed.name || "Counsly student",
-            physics: Number(parsed.physics) || 0,
-            rollNumber: parsed.rollNumber || "",
-            rollVerified: Boolean(parsed.rollVerified),
-            dob: parsed.dob || "",
-            generalRank: parsed.generalRank !== undefined && parsed.generalRank !== null ? String(parsed.generalRank) : "",
-            communityRank: parsed.communityRank !== undefined && parsed.communityRank !== null ? String(parsed.communityRank) : "",
-          });
-        } catch (e) {
-          console.error("Failed to parse student context", e);
-        }
-      }
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("counsly_student_context");
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      setStudentContext({
+        chemistry: Number(parsed.chemistry) || 0,
+        community: parsed.community || "OC",
+        maths: Number(parsed.maths) || 0,
+        name: parsed.name || "Counsly student",
+        physics: Number(parsed.physics) || 0,
+        rollNumber: parsed.rollNumber || "",
+        rollVerified: Boolean(parsed.rollVerified),
+        dob: parsed.dob || "",
+        generalRank: parsed.generalRank !== undefined && parsed.generalRank !== null ? String(parsed.generalRank) : "",
+        communityRank: parsed.communityRank !== undefined && parsed.communityRank !== null ? String(parsed.communityRank) : "",
+      });
+    } catch (error) {
+      console.error("Failed to parse student context", error);
     }
   }, []);
 
@@ -75,9 +118,9 @@ export default function ProfileEditPage() {
     try {
       const persisted = await updateWorkspaceSettings(settings);
       setSettings((current) => ({ ...current, ...persisted }));
-      setStatus("Workspace defaults saved successfully.");
+      showToast("Workspace settings saved.", "success");
     } catch {
-      setStatus("Defaults saved in the current form only because the workspace API did not respond.");
+      showToast("Workspace settings saved locally.", "default");
     }
     setSaved(true);
   };
@@ -91,210 +134,361 @@ export default function ProfileEditPage() {
     }));
   };
 
+  const updateStudentField = (field: keyof typeof studentContext, value: string | number | boolean) => {
+    setStudentContext((current) => ({ ...current, [field]: value }));
+    setHasUnsavedProfile(true);
+  };
+
+  const handleSaveStudentDetails = () => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      "counsly_student_context",
+      JSON.stringify({
+        ...studentContext,
+        maths: Number(studentContext.maths),
+        physics: Number(studentContext.physics),
+        chemistry: Number(studentContext.chemistry),
+        generalRank: studentContext.generalRank === "" ? null : Number(studentContext.generalRank),
+        communityRank: studentContext.communityRank === "" ? null : Number(studentContext.communityRank),
+      }),
+    );
+    showToast("Student profile saved.", "success");
+    setSaved(true);
+    setHasUnsavedProfile(false);
+  };
+
+  const handleRollNumberVerification = async () => {
+    const roll = studentContext.rollNumber.trim();
+    if (!roll) {
+      showToast("Enter a TNEA roll number before verification.", "default");
+      return;
+    }
+    try {
+      const response = await verifyRollNumber(roll);
+      if (response?.success) {
+        setStudentContext((current) => ({
+          ...current,
+          rollVerified: true,
+          community: response.community || current.community,
+        }));
+        showToast(`Roll number verified. Rank: ${response.official_rank}`, "success");
+        setHasUnsavedProfile(true);
+      }
+    } catch (error: any) {
+      showToast(error.message || "Roll number verification failed.", "error");
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader description="Defaults for district fit, branch filters, compact density, student marks, ranks, and DOB details." eyebrow="Profile" title="Tune the workspace to the student." />
-      <p className="rounded-xl border border-counsly-line bg-counsly-canvas px-4 py-3 text-sm text-counsly-body">{status}</p>
-      
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      {toast && (
+        <div className="fixed bottom-24 right-6 z-50 animate-slide-up">
+          <StatusToast message={toast.message} tone={toast.tone} />
+        </div>
+      )}
+
+      <PageHeader
+        description="Keep the details used for counseling recommendations accurate: marks, ranks, community, district, and preferred branches."
+        eyebrow="Profile"
+        title="Student Details"
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
-          <form className="space-y-6" onSubmit={submit}>
-            <Surface className="space-y-4 p-6" tone="paper">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-2xl text-counsly-ink">Workspace Settings</h2>
-                <Badge>{user?.google_email ?? "Local preview profile"}</Badge>
+          <Surface className="p-6" tone="paper">
+            <div className="flex flex-col gap-2 border-b border-counsly-line pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="flex items-center gap-2 font-display text-2xl text-counsly-ink">
+                  <User className="h-5 w-5 text-counsly-coral" />
+                  Academic details
+                </h2>
+                <p className="mt-1 text-sm text-counsly-muted">These values are stored locally in this browser.</p>
               </div>
+              <Badge tone={hasUnsavedProfile ? "warning" : "neutral"}>
+                {hasUnsavedProfile ? "Unsaved changes" : "No pending edits"}
+              </Badge>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className="field-label">
-                Home district
-                <select className="field" onChange={(event) => setSettings((current) => ({ ...current, defaultDistrict: event.target.value }))} value={settings.defaultDistrict}>
-                  {districts.map((item) => <option key={item}>{item}</option>)}
+                Student full name
+                <input
+                  className="field mt-1.5 bg-white"
+                  onChange={(event) => updateStudentField("name", event.target.value)}
+                  placeholder="Name as used for counseling"
+                  type="text"
+                  value={studentContext.name}
+                />
+              </label>
+              <label className="field-label">
+                Date of birth
+                <input
+                  className="field mt-1.5 bg-white"
+                  onChange={(event) => updateStudentField("dob", event.target.value)}
+                  type="date"
+                  value={studentContext.dob}
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <label className="field-label">
+                Mathematics mark / 100
+                <input
+                  className="field mt-1.5 bg-white font-mono"
+                  max="100"
+                  min="0"
+                  onChange={(event) => updateStudentField("maths", clampNumber(event.target.value, 100))}
+                  step="0.5"
+                  type="number"
+                  value={studentContext.maths}
+                />
+              </label>
+              <label className="field-label">
+                Physics mark / 50
+                <input
+                  className="field mt-1.5 bg-white font-mono"
+                  max="50"
+                  min="0"
+                  onChange={(event) => updateStudentField("physics", clampNumber(event.target.value, 50))}
+                  step="0.25"
+                  type="number"
+                  value={studentContext.physics}
+                />
+              </label>
+              <label className="field-label">
+                Chemistry mark / 50
+                <input
+                  className="field mt-1.5 bg-white font-mono"
+                  max="50"
+                  min="0"
+                  onChange={(event) => updateStudentField("chemistry", clampNumber(event.target.value, 50))}
+                  step="0.25"
+                  type="number"
+                  value={studentContext.chemistry}
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 rounded-lg border border-counsly-line bg-counsly-soft px-4 py-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-counsly-muted">Current cutoff</p>
+                  <p className="mt-1 font-mono text-2xl font-semibold text-counsly-ink">{computedCutoff.toFixed(2)} / 200</p>
+                </div>
+                <Badge tone={isEligible ? "safe" : "warning"}>
+                  {isEligible ? "Eligible threshold met" : "Below 78.00 threshold"}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+              <label className="field-label">
+                TNEA roll number
+                <div className="mt-1.5 flex gap-2">
+                  <input
+                    className="field bg-white font-mono"
+                    onChange={(event) => {
+                      setStudentContext((current) => ({ ...current, rollNumber: event.target.value, rollVerified: false }));
+                      setHasUnsavedProfile(true);
+                    }}
+                    placeholder="Enter roll number"
+                    type="text"
+                    value={studentContext.rollNumber}
+                  />
+                  <button
+                    className="button-secondary shrink-0 px-3"
+                    onClick={handleRollNumberVerification}
+                    type="button"
+                  >
+                    {studentContext.rollVerified ? <CheckCircle2 className="h-4 w-4 text-counsly-teal" /> : <RefreshCw className="h-4 w-4" />}
+                    {studentContext.rollVerified ? "Verified" : "Verify"}
+                  </button>
+                </div>
+              </label>
+
+              <label className="field-label">
+                Community
+                <select
+                  className="field mt-1.5 bg-white"
+                  onChange={(event) => updateStudentField("community", event.target.value)}
+                  value={studentContext.community}
+                >
+                  {COMMUNITIES.map((community) => (
+                    <option key={community} value={community}>
+                      {community}
+                    </option>
+                  ))}
                 </select>
               </label>
-              <fieldset className="space-y-2">
-                <legend className="field-label">Preferred branches</legend>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {branches.map((branch) => (
-                    <label className="flex min-h-11 items-center gap-3 rounded-lg border border-counsly-line p-3 text-sm text-counsly-body" key={branch.code}>
-                      <input checked={settings.preferredBranches.includes(branch.code)} onChange={() => toggleBranch(branch.code)} type="checkbox" />
-                      {branch.name}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <div className="grid gap-2 md:grid-cols-2">
-                <label className="flex min-h-11 items-center gap-3 rounded-lg border border-counsly-line p-3 text-sm text-counsly-body">
-                  <input checked={settings.compactView} onChange={(event) => setSettings((current) => ({ ...current, compactView: event.target.checked }))} type="checkbox" />
-                  Use compact choice density
-                </label>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <label className="field-label">
+                General rank
+                <input
+                  className="field mt-1.5 bg-white font-mono"
+                  min="1"
+                  onChange={(event) => updateStudentField("generalRank", event.target.value)}
+                  placeholder="Optional"
+                  type="number"
+                  value={studentContext.generalRank}
+                />
+              </label>
+              <label className="field-label">
+                Community rank
+                <input
+                  className="field mt-1.5 bg-white font-mono"
+                  min="1"
+                  onChange={(event) => updateStudentField("communityRank", event.target.value)}
+                  placeholder="Optional"
+                  type="number"
+                  value={studentContext.communityRank}
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 border-t border-counsly-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="flex items-center gap-2 text-sm text-counsly-muted">
+                {hasUnsavedProfile ? <AlertCircle className="h-4 w-4 text-counsly-coral" /> : <Check className="h-4 w-4 text-counsly-teal" />}
+                {hasUnsavedProfile ? "Save academic details before using recommendations." : "Academic details are saved locally."}
+              </p>
+              <button className="button-primary" onClick={handleSaveStudentDetails} type="button">
+                Save academic details
+              </button>
+            </div>
+          </Surface>
+
+          <form onSubmit={submit}>
+            <Surface className="p-6" tone="paper">
+              <div className="border-b border-counsly-line pb-4">
+                <h2 className="flex items-center gap-2 font-display text-2xl text-counsly-ink">
+                  <Compass className="h-5 w-5 text-counsly-coral" />
+                  Workspace settings
+                </h2>
+                <p className="mt-1 text-sm text-counsly-muted">{user?.google_email ?? "Local student workspace"}</p>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <label className="field-label">
-                  Mobile density
-                  <select className="field" onChange={(event) => setSettings((current) => ({ ...current, mobileDensity: event.target.value }))} value={settings.mobileDensity}>
+                  Home district
+                  <select
+                    className="field mt-1.5 bg-white"
+                    onChange={(event) => setSettings((current) => ({ ...current, defaultDistrict: event.target.value }))}
+                    value={settings.defaultDistrict}
+                  >
+                    {districts.map((district) => (
+                      <option key={district}>{district}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="field-label">
+                  Mobile display density
+                  <select
+                    className="field mt-1.5 bg-white"
+                    onChange={(event) => setSettings((current) => ({ ...current, mobileDensity: event.target.value }))}
+                    value={settings.mobileDensity}
+                  >
                     <option value="default">Default</option>
                     <option value="compact">Compact</option>
                     <option value="comfortable">Comfortable</option>
                   </select>
                 </label>
               </div>
-              <button className="button-primary w-fit" type="submit">Save workspace defaults</button>
+
+              <fieldset className="mt-6">
+                <legend className="field-label">Preferred branches</legend>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {branches.map((branch) => {
+                    const selected = settings.preferredBranches.includes(branch.code);
+                    return (
+                      <label
+                        className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
+                          selected ? "border-counsly-coral bg-counsly-soft text-counsly-ink" : "border-counsly-line bg-white text-counsly-body"
+                        }`}
+                        key={branch.code}
+                      >
+                        <input
+                          checked={selected}
+                          className="h-4 w-4 accent-counsly-coral"
+                          onChange={() => toggleBranch(branch.code)}
+                          type="checkbox"
+                        />
+                        <span className="font-mono text-xs font-semibold">{branch.code}</span>
+                        <span className="truncate">{branch.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              <div className="mt-6 flex flex-col gap-3 border-t border-counsly-line pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-3 text-sm font-medium text-counsly-body">
+                  <input
+                    checked={settings.compactView}
+                    className="h-4 w-4 accent-counsly-coral"
+                    onChange={(event) => setSettings((current) => ({ ...current, compactView: event.target.checked }))}
+                    type="checkbox"
+                  />
+                  Use compact desktop rows
+                </label>
+                <button className="button-primary" type="submit">
+                  Save workspace settings
+                </button>
+              </div>
             </Surface>
           </form>
-
-          <Surface className="space-y-4 p-6" tone="paper">
-            <h2 className="font-display text-2xl text-counsly-ink">Student Profile Details</h2>
-            <p className="text-xs text-counsly-body">Capture core ranks, DOB, and scores used in eligibility and cutoff calculations.</p>
-            
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="field-label">
-                Student name
-                <input
-                  type="text"
-                  className="field"
-                  value={studentContext.name}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, name: e.target.value }))}
-                  required
-                />
-              </label>
-              <label className="field-label">
-                Date of birth
-                <input
-                  type="date"
-                  className="field"
-                  value={studentContext.dob}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, dob: e.target.value }))}
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="field-label">
-                Mathematics (Max 100)
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  className="field font-mono"
-                  value={studentContext.maths}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, maths: Number(e.target.value) }))}
-                  required
-                />
-              </label>
-              <label className="field-label">
-                Physics (Max 50)
-                <input
-                  type="number"
-                  min="0"
-                  max="50"
-                  className="field font-mono"
-                  value={studentContext.physics}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, physics: Number(e.target.value) }))}
-                  required
-                />
-              </label>
-              <label className="field-label">
-                Chemistry (Max 50)
-                <input
-                  type="number"
-                  min="0"
-                  max="50"
-                  className="field font-mono"
-                  value={studentContext.chemistry}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, chemistry: Number(e.target.value) }))}
-                  required
-                />
-              </label>
-            </div>
-
-            <div className="bg-counsly-soft rounded-lg p-3 border border-counsly-line flex items-center justify-between">
-              <span className="text-xs font-bold text-counsly-body">Computed Cutoff:</span>
-              <span className="text-base font-extrabold text-counsly-coral font-mono">
-                {(Number(studentContext.maths) + Number(studentContext.physics) + Number(studentContext.chemistry)).toFixed(2)} / 200
-              </span>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="field-label">
-                Community / Category
-                <select
-                  className="field"
-                  value={studentContext.community}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, community: e.target.value }))}
-                >
-                  {["OC", "BC", "BCM", "MBC", "SC", "SCA", "ST"].map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="field-label">
-                Roll number
-                <input
-                  type="text"
-                  className="field font-mono"
-                  value={studentContext.rollNumber}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, rollNumber: e.target.value }))}
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="field-label">
-                TNEA Overall General Rank (Optional)
-                <input
-                  type="number"
-                  className="field font-mono"
-                  placeholder="e.g. 1524"
-                  value={studentContext.generalRank}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, generalRank: e.target.value }))}
-                />
-              </label>
-              <label className="field-label">
-                TNEA Community Rank (Optional)
-                <input
-                  type="number"
-                  className="field font-mono"
-                  placeholder="e.g. 341"
-                  value={studentContext.communityRank}
-                  onChange={(e) => setStudentContext((prev) => ({ ...prev, communityRank: e.target.value }))}
-                />
-              </label>
-            </div>
-            
-            <button
-              className="button-primary w-fit animate-fade-in"
-              type="button"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  localStorage.setItem(
-                    "counsly_student_context",
-                    JSON.stringify({
-                      ...studentContext,
-                      maths: Number(studentContext.maths),
-                      physics: Number(studentContext.physics),
-                      chemistry: Number(studentContext.chemistry),
-                      generalRank: studentContext.generalRank === "" ? null : Number(studentContext.generalRank),
-                      communityRank: studentContext.communityRank === "" ? null : Number(studentContext.communityRank),
-                    })
-                  );
-                  setStatus("Student profile details successfully saved to local workspace store.");
-                  setSaved(true);
-                }
-              }}
-            >
-              Save Student Details
-            </button>
-          </Surface>
         </div>
 
-        <Surface className="space-y-4 p-6 h-fit" tone="soft">
-          <h2 className="font-display text-3xl text-counsly-ink">Workspace boundary</h2>
-          <p className="text-sm leading-6 text-counsly-body">Choices, compares, snapshots, and settings stay private to this student profile.</p>
-          {saved && (
-            <p className="flex items-center gap-2 rounded-lg bg-counsly-safe/15 p-3 text-sm text-counsly-ink animate-slide-up">
-              <CheckCircle2 className="h-4 w-4 text-counsly-safe" />
-              Profile changes saved successfully.
+        <aside className="space-y-4">
+          <Surface className="p-5" tone="paper">
+            <div className="flex items-center justify-between border-b border-counsly-line pb-3">
+              <h2 className="font-display text-xl text-counsly-ink">Summary</h2>
+              <Award className="h-5 w-5 text-counsly-coral" />
+            </div>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-counsly-muted">Cutoff</dt>
+                <dd className="font-mono font-semibold text-counsly-ink">{computedCutoff.toFixed(2)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-counsly-muted">Eligibility</dt>
+                <dd className={isEligible ? "font-medium text-counsly-ink" : "font-medium text-counsly-coral"}>
+                  {isEligible ? "Meets threshold" : "Below threshold"}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-counsly-muted">Community</dt>
+                <dd className="font-medium text-counsly-ink">{studentContext.community}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-counsly-muted">Roll number</dt>
+                <dd className="font-medium text-counsly-ink">{studentContext.rollVerified ? "Verified" : "Not verified"}</dd>
+              </div>
+            </dl>
+          </Surface>
+
+          <Surface className="p-5" tone="paper">
+            <h2 className="font-display text-xl text-counsly-ink">Community group</h2>
+            <p className="mt-2 text-sm leading-6 text-counsly-body">
+              {COMMUNITY_NOTES[studentContext.community] || "Select a community group."}
             </p>
-          )}
-        </Surface>
+          </Surface>
+
+          <Surface className="p-5" tone="paper">
+            <h2 className="font-display text-xl text-counsly-ink">Data storage</h2>
+            <p className="mt-2 text-sm leading-6 text-counsly-body">
+              Student marks, ranks, date of birth, and roll number are stored in browser local storage. Workspace settings sync through the backend when available.
+            </p>
+            {saved && (
+              <p className="mt-4 flex items-center gap-2 rounded-lg border border-counsly-line bg-counsly-soft p-3 text-sm font-medium text-counsly-ink">
+                <Check className="h-4 w-4 text-counsly-teal" />
+                Recent changes saved.
+              </p>
+            )}
+          </Surface>
+        </aside>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Any, Dict, List, Optional
 from datetime import datetime, date
+
+from backend.community import normalize_community
 
 # --- AUTH & USER SCHEMAS ---
 class UserProfile(BaseModel):
@@ -64,8 +66,15 @@ class ChoiceItemResponse(ChoiceItemBase):
         "from_attributes": True
     }
 
+class ReorderItem(BaseModel):
+    college_code: str = Field(..., max_length=50)
+    branch_code: str = Field(..., max_length=50)
+    priority: int = Field(..., ge=1, le=300)
+    category: Optional[str] = Field("Moderate", max_length=50)
+    notes: Optional[str] = Field(None, max_length=1024)
+
 class ReorderRequest(BaseModel):
-    priorities: List[Dict[str, Any]]  # List containing dictionary keys of: college_code, branch_code, new_priority
+    priorities: List[ReorderItem]
 
 class SnapshotCreate(BaseModel):
     title: str
@@ -97,11 +106,17 @@ class CollegeSearchQuery(BaseModel):
     district: Optional[str] = None
     type: Optional[str] = None  # 'Govt', 'Aided', 'Self-Finance'
     branch_code: Optional[str] = None
+    community: Optional[str] = None
     is_autonomous: Optional[bool] = None
     min_placement_rate: Optional[float] = None
     search: Optional[str] = None
-    limit: int = 50
-    offset: int = 0
+    limit: int = Field(50, ge=1, le=100)
+    offset: int = Field(0, ge=0)
+
+    @field_validator("community")
+    @classmethod
+    def normalize_requested_community(cls, value: Optional[str]) -> Optional[str]:
+        return normalize_community(value) if value else value
 
 class CollegeCompactResponse(BaseModel):
     code: str
@@ -112,6 +127,11 @@ class CollegeCompactResponse(BaseModel):
     fee_structure_annual: Optional[int]
     placement_rate_pct: Optional[float]
     fit_score: float
+    branch_code: Optional[str] = None
+    branch_name: Optional[str] = None
+    cutoff_mark_2025: Optional[float] = None
+    cutoff_rank_2025: Optional[int] = None
+    seats: Optional[int] = None
 
 class CutoffTrend(BaseModel):
     year: int
@@ -139,6 +159,18 @@ class CollegeDetailResponse(BaseModel):
     nearest_railway_station_latitude: Optional[float] = None
     nearest_railway_station_longitude: Optional[float] = None
     nearest_railway_distance_km: Optional[float]
+    nearest_express_station: Optional[str] = None
+    nearest_express_station_latitude: Optional[float] = None
+    nearest_express_station_longitude: Optional[float] = None
+    nearest_express_station_distance_km: Optional[float] = None
+    nearest_bus_station: Optional[str] = None
+    nearest_bus_station_latitude: Optional[float] = None
+    nearest_bus_station_longitude: Optional[float] = None
+    nearest_bus_station_distance_km: Optional[float] = None
+    nearest_bus_stop: Optional[str] = None
+    nearest_bus_stop_latitude: Optional[float] = None
+    nearest_bus_stop_longitude: Optional[float] = None
+    nearest_bus_stop_distance_km: Optional[float] = None
     nearest_tfc: Optional[Dict[str, Any]] = None
     branches: List[Dict[str, Any]]  # List of branches and community seats
     cutoff_trends: Dict[str, List[CutoffTrend]]  # Map branch_code to list of historical cutoffs
@@ -146,8 +178,14 @@ class CollegeDetailResponse(BaseModel):
 
 # --- COMPARE SCHEMAS ---
 class CompareRequest(BaseModel):
-    college_codes: List[str]
-    branch_codes: List[str]
+    college_codes: List[str] = Field(..., min_length=2, max_length=4)
+    branch_codes: List[str] = Field(..., min_length=1)
+    community: Optional[str] = None
+
+    @field_validator("community")
+    @classmethod
+    def normalize_requested_community(cls, value: Optional[str]) -> Optional[str]:
+        return normalize_community(value) if value else value
 
 class CollegeCompareColumn(BaseModel):
     code: str
@@ -187,15 +225,18 @@ class CompareSessionResponse(CompareSessionCreate):
 
 # --- LOGGING SCHEMAS ---
 class ClientErrorLogRequest(BaseModel):
-    kind: str
-    endpoint: Optional[str] = None
-    error_type: Optional[str] = None
-    message: Optional[str] = None
-    stack: Optional[str] = None
+    kind: str = Field(..., max_length=100)
+    endpoint: Optional[str] = Field(None, max_length=2048)
+    error_type: Optional[str] = Field(None, max_length=256)
+    message: Optional[str] = Field(None, max_length=4096)
+    stack: Optional[str] = Field(None, max_length=16384)
     status: Optional[int] = None
-    timestamp: Optional[str] = None
-    user_id_hash: Optional[str] = None
+    timestamp: Optional[str] = Field(None, max_length=100)
+    user_id_hash: Optional[str] = Field(None, max_length=128)
 
 class ClientErrorLogResponse(BaseModel):
     accepted: bool
     id: int
+
+class VerifyRollRequest(BaseModel):
+    roll_number: str = Field(..., max_length=30)

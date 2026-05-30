@@ -120,7 +120,21 @@ CREATE TABLE IF NOT EXISTS colleges (
   nba_accredited BOOLEAN DEFAULT FALSE,
   coordinates_approximate BOOLEAN DEFAULT FALSE,
   nearest_railway_station VARCHAR(150),
+  nearest_railway_station_latitude DOUBLE PRECISION,
+  nearest_railway_station_longitude DOUBLE PRECISION,
   nearest_railway_distance_km DOUBLE PRECISION,
+  nearest_express_station VARCHAR(150),
+  nearest_express_station_latitude DOUBLE PRECISION,
+  nearest_express_station_longitude DOUBLE PRECISION,
+  nearest_express_station_distance_km DOUBLE PRECISION,
+  nearest_bus_station VARCHAR(150),
+  nearest_bus_station_latitude DOUBLE PRECISION,
+  nearest_bus_station_longitude DOUBLE PRECISION,
+  nearest_bus_station_distance_km DOUBLE PRECISION,
+  nearest_bus_stop VARCHAR(150),
+  nearest_bus_stop_latitude DOUBLE PRECISION,
+  nearest_bus_stop_longitude DOUBLE PRECISION,
+  nearest_bus_stop_distance_km DOUBLE PRECISION,
   fee_structure_annual INTEGER,
   placement_rate_pct DOUBLE PRECISION,
   avg_package_lpa DOUBLE PRECISION,
@@ -222,8 +236,23 @@ CREATE TABLE IF NOT EXISTS college_compare_history (
 -- 20. Device Fingerprints Abuse Layer
 CREATE TABLE IF NOT EXISTS device_fingerprints (
   id BIGSERIAL PRIMARY KEY,
-  fingerprint_hash VARCHAR(64) UNIQUE NOT NULL,
+  fingerprint_hash VARCHAR(64) NOT NULL,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (fingerprint_hash, user_id)
+);
+
+-- 21. Client Error Logs
+CREATE TABLE IF NOT EXISTS client_error_log (
+  id BIGSERIAL PRIMARY KEY,
+  kind VARCHAR(40) NOT NULL,
+  endpoint VARCHAR(240),
+  error_type VARCHAR(120),
+  message TEXT,
+  stack TEXT,
+  status_code INTEGER,
+  user_id_hash VARCHAR(64),
+  reported_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -231,3 +260,6 @@ CREATE TABLE IF NOT EXISTS device_fingerprints (
 CREATE INDEX IF NOT EXISTS idx_user_prefs_workspace ON user_college_preferences(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_cutoff_coll_branch ON cutoff_data(college_code, branch_code);
 CREATE INDEX IF NOT EXISTS idx_cutoff_community ON cutoff_data(community);
+CREATE INDEX IF NOT EXISTS idx_workspace_settings_ws ON workspace_settings(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_act_ws ON workspace_activity(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_compare_hist_ws ON college_compare_history(workspace_id);
