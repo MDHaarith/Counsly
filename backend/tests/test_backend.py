@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from backend.routes.compare import build_structural_explanation
+from backend.routes.compare import build_multi_structural_explanation
 from backend.routes.explore import community_seat_payload
 from backend.routes.guidance import MIN_ELIGIBLE_AGGREGATE, compute_aggregate
 from backend.schemas import CollegeCompareColumn, CollegeSearchQuery, CompareRequest
@@ -54,20 +54,23 @@ def test_community_seat_payload_hides_other_communities():
     assert "sc" not in payload
 
 
-def test_structural_explanation_uses_top_two_differences():
+def test_multi_structural_explanation():
     c1 = make_column("College One")
+    c1.fee_structure_annual = 25000
+    c1.placement_rate_pct = 95.0
+    c1.is_autonomous = True
+    c1.district = "Chennai"
+
     c2 = make_column("College Two")
+    c2.fee_structure_annual = 50000
+    c2.placement_rate_pct = 80.0
+    c2.is_autonomous = False
+    c2.district = "Coimbatore"
 
-    explanation = build_structural_explanation(
-        c1,
-        c2,
-        [
-            "fees difference (₹25,000/year lower at College One)",
-            "district fit (Chennai versus Coimbatore)",
-        ],
-    )
+    explanation = build_multi_structural_explanation([c1, c2])
 
-    assert "fees difference" in explanation
-    assert "district fit" in explanation
-    assert "tie-breakers" in explanation
+    assert "College One has the most affordable annual fee" in explanation
+    assert "College One has the highest placement rate" in explanation
+    assert "autonomous regulation is offered at College One" in explanation
+
 

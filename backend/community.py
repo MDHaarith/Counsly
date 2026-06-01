@@ -13,12 +13,12 @@ def normalize_community(value: str | None) -> str:
 
 
 def resolve_user_community(community: str | None, current_user: User, db: Session) -> str:
-    if community:
-        return normalize_community(community)
     if current_user.roll_number_verified and current_user.roll_number:
         roll_rec = db.query(TNEARollNumber).filter(TNEARollNumber.roll_number == current_user.roll_number).first()
         if roll_rec:
             return normalize_community(roll_rec.community)
+    if community:
+        return normalize_community(community)
     return "OC"
 
 

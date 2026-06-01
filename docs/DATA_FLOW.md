@@ -1,162 +1,122 @@
-# Counsly Data Flow Architecture & Lifecycle
-**Project Scope:** TNEA 2027 Data-Only MVP  
-**Tech Stack:** Next.js 14 (App Router) + FastAPI + SQLite
+# Counsly PCB Data Flow
+
+**Goal:** make the product feel like a printed circuit board, not a bundle of loose jumper wires. Every feature should connect through a named lane, a stable connector, and one data contract.
 
 ---
 
-## 1. High-Level Data Flow Overview
+## 1. Board Layout
 
-Counsly operates as an offline-first, high-performance data-only MVP. The data architecture flows seamlessly across three primary tiers: client browser (`sessionStorage` and local React contexts), FastAPI advisory router layers, and SQLite structured master/workspace databases.
+Counsly has four lanes. A change should usually fit into exactly one lane, and cross-lane traffic should happen only through the API connector listed here.
 
-```mermaid
-graph TD
-    subgraph Client Browser (Next.js 14)
-        UI[Student UI AppShell]
-        LocalCtx[React AppContext]
-        SStorage[sessionStorage Session Cache]
-    end
-
-    subgraph Advisory API Tier (FastAPI)
-        AuthRoute[Auth & Profile Router]
-        ExploreRoute[Explore & Search Router]
-        ChoiceRoute[Choice List Router]
-        MapsRoute[GIS Maps Router]
-    end
-
-    subgraph Relational Storage (SQLite)
-        MasterDB[(Master Data: Colleges & Cutoffs)]
-        WorkDB[(Workspace Data: Users & Preferences)]
-    end
-
-    UI -->|1. Onboard / Authenticate| AuthRoute
-    UI -->|2. Search & Filter Quotas| ExploreRoute
-    UI -->|3. File Priorities| ChoiceRoute
-    UI -->|4. Request Road Directions| MapsRoute
-
-    AuthRoute <-->|Read / Write Profile| WorkDB
-    ExploreRoute <-->|Query Master Data| MasterDB
-    ChoiceRoute <-->|Save Choice List| WorkDB
-    MapsRoute <-->|Query Geocodes| MasterDB
-
-    LocalCtx <--> SStorage
-    UI <--> LocalCtx
-```
-
----
-
-## 2. Dynamic Data Lifecycle Phases
-
-### Phase A: Onboarding, Cutoff Calculation & Workspace Sync
-1. **Input Collection:** The student enters their subject marks (Mathematics, Physics, Chemistry), Date of Birth, community quota category (OC, BC, BCM, MBC, SC, SCA, ST), and preferred branch targets in the profile editor or onboarding wizard.
-2. **Client-Side Cutoff Computation:** Cutoff marks are computed instantly on the frontend:
-   $$\text{TNEA Cutoff} = \text{Mathematics} + \frac{\text{Physics}}{2} + \frac{\text{Chemistry}}{2}$$
-3. **Eligibility Gateway:** If the cutoff is $\ge 78.0$, the student passes TNEA qualifying thresholds.
-4. **Database State Persistence:** The frontend posts the completed profile to `/auth/onboarding` or `/auth/profile`. The backend saves:
-   - User credentials to `users`.
-   - Workspace profile and completed state to `workspaces`.
-   - District filter and branch priorities list to `workspace_settings` (stored as stringified arrays/JSON configurations).
-
----
-
-### Phase B: College Explorer, Community Seats & Cutoff History
-When a student browses colleges on the explorer page or views recommendations, the data flows dynamically based on their community quota context:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Student as Student Browser
-    participant API as FastAPI /explore
-    participant DB as SQLite Database
-
-    Student->>API: GET /explore/{college_code}?community=BC
-    Note over API, DB: Joint Queries across Master Data
-    API->>DB: Query colleges directory
-    DB-->>API: Name, Type, Autonomous, NBA info
-    API->>DB: Query community_seats (filter by BC)
-    DB-->>API: Available seats in BC quota (e.g. 12 / 60)
-    API->>DB: Query cutoff_data (filter by BC & branch_code)
-    DB-->>API: Historical rounds cutoff marks & ranks
-    API-->>Student: Highly optimized fit score & quota metrics JSON
-```
-
----
-
-### Phase C: Choice List Filing & Priority Reordering
-1. **Filing Choices:** When a student selects a branch in a college to add to their choices, a `POST` request is dispatched to `/choices/add`.
-2. **Constraint Verification:** The backend confirms that:
-   - The branch and college exist in `college_branches`.
-   - The priority ranking does not exceed limits (1 to 300).
-3. **Database Write:** Stored securely inside `user_college_preferences` mapped against the user's active `workspace_id`.
-4. **Filing Snapshots:** Students can capture their current preference ranks as a static snapshot, executing a transactional duplicate copy from `user_college_preferences` to `shortlist_snapshots` and `shortlist_snapshot_items`.
-
----
-
-### Phase D: GIS Map & Transit Routing Pipeline
-Counsly's map inspector resolves accurate road driving distances to 4 verified transit categories: local commuter halt, express rail junction, regional bus stand, and local bus stop.
+| PCB lane | Frontend surface | API connector | Storage plane | Rule |
+| --- | --- | --- | --- | --- |
+| Identity lane | Login, onboarding, profile | `/auth/*`, `/guidance/onboarding`, `/workspace/settings` | `users`, `workspaces`, `workspace_settings`, `device_fingerprints` | Owns who the student is and their saved context. |
+| Discovery lane | Explore, recommendations, compare | `/explore/*`, `/compare/*` | `colleges`, `branches`, `college_branches`, `cutoff_data`, `community_seats` | Read-only master-data queries; never mutates choices. |
+| Filing lane | Choices, snapshots, CSV import | `/choices/*` | `user_college_preferences`, `shortlist_snapshots`, `shortlist_snapshot_items` | Owns the student's ordered filing list. |
+| Location lane | Maps, TFC centers, transit hubs | `/maps/*` | `colleges`, `tfc_locations` | Owns coordinates and route-friendly transit payloads. |
 
 ```mermaid
 graph LR
-    subgraph Database Geocodes
-        C_Coord[College Coordinates]
-        T_Coord[Transit Point Coordinates]
-    end
+  subgraph Browser[Next.js browser board]
+    UI[Pages and components]
+    Context[AppContext + sessionStorage]
+    ApiClient[frontend/lib/api.mjs]
+    RouteManifest[frontend/lib/api-routes.mjs]
+  end
 
-    subgraph OSRM Engine
-        OSRM_API[router.project-osrm.org]
-    end
+  subgraph Api[FastAPI connector bank]
+    Auth[/auth + /guidance + /workspace/]
+    Explore[/explore + /compare/]
+    Choices[/choices/]
+    Maps[/maps/]
+  end
 
-    subgraph Leaflet WebUI
-        MapCanvas[Dynamic OpenStreetMap Layer]
-        Polyline[Solid Styled Route Accents]
-    end
+  subgraph Db[Database planes]
+    Workspace[(workspace state)]
+    Master[(master college data)]
+    Filing[(choice filing state)]
+    Geo[(geo + TFC data)]
+  end
 
-    C_Coord -->|Origin Lat/Lon| OSRM_API
-    T_Coord -->|Destination Lat/Lon| OSRM_API
-    OSRM_API -->|Road Path Polylines & Distances| MapCanvas
-    MapCanvas -->|Draw Local Blue / Express Purple / Bus Green| Polyline
+  UI --> Context
+  UI --> ApiClient
+  ApiClient --> RouteManifest
+  ApiClient --> Auth
+  ApiClient --> Explore
+  ApiClient --> Choices
+  ApiClient --> Maps
+  Auth --> Workspace
+  Explore --> Master
+  Choices --> Filing
+  Maps --> Geo
 ```
 
 ---
 
-## 3. SQLite Database Schema Mappings
+## 2. Connector Manifest
 
-The following tables handle the backend state:
+The frontend must not scatter stringly typed endpoints through page components. Endpoint names live in `frontend/lib/api-routes.mjs`; request/response normalization lives in `frontend/lib/api.mjs`; pages call feature helpers only.
 
 ```text
-  +--------------------+             +------------------+             +----------------------+
-  |       users        |             |    workspaces    |             |  workspace_settings  |
-  +--------------------+             +------------------+             +----------------------+
-  | id (PK)            | <---------- | id (PK)          | <---------- | id (PK)              |
-  | auth_user_id (UQ)  |             | user_id (FK)     |             | workspace_id (FK)    |
-  | google_email       |             | name             |             | default_district     |
-  | name               |             | onboarding_step  |             | preferred_branches   |
-  | roll_number        |             +------------------+             +----------------------+
-  +--------------------+                      |
-                                              |
-                                              v
-                              +----------------------------+
-                              |  user_college_preferences  |
-                              +----------------------------+
-                              | id (PK)                    |
-                              | workspace_id (FK)          |
-                              | college_code               |
-                              | branch_code                |
-                              | priority                   |
-                              +----------------------------+
+Page/component
+  -> feature helper in frontend/lib/api.mjs
+    -> endpoint from frontend/lib/api-routes.mjs
+      -> backend route module
+        -> SQLAlchemy model / database table
 ```
 
-### Table Dictionary Summary
-* **Master Directories (Static Read-Only):**
-  - `colleges`: Core directory of Tamil Nadu colleges, geolocations, and parameters.
-  - `branches`: Comprehensive course catalogue.
-  - `college_branches`: Valid college and branch intake configurations.
-  - `cutoff_data`: Aggregated historical cutoffs.
-  - `community_seats`: Multi-community seats availability matrix.
-  - `tfc_locations`: Address and coordinates of TNEA Facilitation Centres.
-* **Workspace Engine (Dynamic Read-Write):**
-  - `users` / `workspaces`: Authenticated sessions and completion milestones.
-  - `workspace_settings`: Filter criteria defaults.
-  - `user_college_preferences`: Live priorities filed by the student.
-  - `shortlist_snapshots` / `shortlist_snapshot_items`: Archived preference configurations.
-  - `device_fingerprints`: Anti-abuse rate-limiting layer.
-  - `workspace_activity`: Append-only student audit ledger.
+This gives each route a solder pad. If a URL changes, the trace is repaired in one place instead of hunting through the whole board.
+
+---
+
+## 3. Lane Contracts
+
+### Identity lane
+
+1. `startSession()` opens or resumes a user session.
+2. `runOnboarding()` computes eligibility and stores onboarding context.
+3. `fetchWorkspaceSettings()` and `updateWorkspaceSettings()` keep UI preferences synced.
+4. `verifyRollNumber()` is an identity-side check; discovery pages should not duplicate it.
+
+### Discovery lane
+
+1. `searchColleges()` sends normalized community context with the search payload.
+2. `fetchCollegeDetail()` reads one college detail payload for one selected community.
+3. `compareColleges()` compares selected colleges and branches without mutating saved choices.
+4. Recommendations should consume discovery payloads, not reimplement cutoff joins in the UI.
+
+### Filing lane
+
+1. `fetchChoices()` reads the current ordered filing list.
+2. `addChoice()`, `updateChoice()`, and `reorderChoices()` are the only frontend write connectors for live choices.
+3. Snapshot helpers own archival copy/restore behavior.
+4. CSV upload enters through `uploadChoiceCsv()` so validation stays behind one API port.
+
+### Location lane
+
+1. `fetchMapColleges()` returns map-ready college and transit-point records.
+2. `fetchTfcLocations()` returns facilitation centers.
+3. Route drawing and external navigation URL construction stay in map-specific helpers; discovery payloads should not grow map-only display state.
+
+---
+
+## 4. Anti-Spaghetti Rules
+
+1. **No page-to-backend string wiring:** pages should call helpers from `frontend/lib/api.mjs`, not raw `fetch("/some/path")` calls.
+2. **No duplicate endpoint literals:** shared endpoint paths belong in `frontend/lib/api-routes.mjs`.
+3. **No cross-lane writes:** discovery and location reads must not mutate filing state.
+4. **No UI-owned database joins:** backend route modules own joins, filtering, pagination bounds, and write validation.
+5. **No hidden generated state:** generated data and extraction outputs should be documented as data pipeline artifacts, not mixed into runtime app flow.
+
+---
+
+## 5. Change Checklist
+
+Before adding a feature, pick the PCB lane and answer these questions:
+
+- Which lane owns the feature?
+- Which helper in `frontend/lib/api.mjs` is the public connector?
+- Does `frontend/lib/api-routes.mjs` already have the endpoint solder pad?
+- Which backend route module owns validation?
+- Which database plane is read or written?
+- Which unit/integration test proves the trace still conducts?

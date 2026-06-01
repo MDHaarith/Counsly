@@ -170,6 +170,7 @@ export default function ProfileEditPage() {
           ...current,
           rollVerified: true,
           community: response.community || current.community,
+          generalRank: response.official_rank !== undefined ? String(response.official_rank) : current.generalRank,
         }));
         showToast(`Roll number verified. Rank: ${response.official_rank}`, "success");
         setHasUnsavedProfile(true);

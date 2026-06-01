@@ -7,7 +7,7 @@ from sqlalchemy import and_, delete
 from typing import List, Optional
 from backend.database import get_db
 from backend.models import User, Workspace, UserCollegePreference, College, Branch, ShortlistSnapshot, ShortlistSnapshotItem, WorkspaceActivity, CollegeBranch
-from backend.schemas import ChoiceItemResponse, ChoiceItemCreate, ReorderRequest, SnapshotCreate, SnapshotResponse
+from backend.schemas import ChoiceItemResponse, ChoiceItemCreate, ReorderRequest, SnapshotCreate, SnapshotResponse, ChoiceUpdate
 from backend.routes.auth import get_current_user
 
 router = APIRouter(prefix="/choices", tags=["choices"])
@@ -61,6 +61,27 @@ def add_choice(req: ChoiceItemCreate, current_user: User = Depends(get_current_u
     if not college or not branch:
         raise HTTPException(status_code=404, detail="Invalid college or branch code specified")
         
+    # Validate college-branch mapping
+    cb_link = db.query(CollegeBranch).filter(
+        and_(
+            CollegeBranch.college_code == req.college_code,
+            CollegeBranch.branch_code == req.branch_code
+        )
+    ).first()
+    if not cb_link:
+        raise HTTPException(status_code=400, detail=f"College {req.college_code} does not offer branch {req.branch_code}")
+        
+    # Prevent duplicate choices
+    dup = db.query(UserCollegePreference).filter(
+        and_(
+            UserCollegePreference.workspace_id == ws.id,
+            UserCollegePreference.college_code == req.college_code,
+            UserCollegePreference.branch_code == req.branch_code
+        )
+    ).first()
+    if dup:
+        raise HTTPException(status_code=400, detail="This college and branch combination is already in your choice list.")
+        
     # Next priority index
     new_priority = count + 1
     
@@ -90,6 +111,7 @@ def add_choice(req: ChoiceItemCreate, current_user: User = Depends(get_current_u
         placement_rate_pct=college.placement_rate_pct
     )
 
+
 @router.put("/reorder")
 def reorder_choices(req: ReorderRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ws = current_user.workspace
@@ -105,6 +127,14 @@ def reorder_choices(req: ReorderRequest, current_user: User = Depends(get_curren
     if len(updates) > 300:
         raise HTTPException(status_code=400, detail="Cannot exceed maximum of 300 items")
 
+    # Prevent duplicate choices in the reorder payload
+    seen_pairs = set()
+    for item in updates:
+        pair = (item.college_code, item.branch_code)
+        if pair in seen_pairs:
+            raise HTTPException(status_code=400, detail=f"Duplicate choice list contains duplicate college-branch entry: College {item.college_code} + Branch {item.branch_code}")
+        seen_pairs.add(pair)
+
     # Pre-validate all college and branch codes to ensure database integrity
     college_codes = {item.college_code for item in updates}
     branch_codes = {item.branch_code for item in updates}
@@ -115,11 +145,20 @@ def reorder_choices(req: ReorderRequest, current_user: User = Depends(get_curren
     existing_branches = db.query(Branch.code).filter(Branch.code.in_(branch_codes)).all()
     existing_branch_codes = {b[0] for b in existing_branches}
     
+    # Bulk fetch valid college-branch mappings for these colleges
+    valid_cb = db.query(CollegeBranch.college_code, CollegeBranch.branch_code).filter(
+        CollegeBranch.college_code.in_(list(existing_college_codes))
+    ).all()
+    valid_cb_set = {(cb[0], cb[1]) for cb in valid_cb}
+    
     for item in updates:
         if item.college_code not in existing_college_codes:
             raise HTTPException(status_code=400, detail=f"Invalid college code: {item.college_code}")
         if item.branch_code not in existing_branch_codes:
             raise HTTPException(status_code=400, detail=f"Invalid branch code: {item.branch_code}")
+        if (item.college_code, item.branch_code) not in valid_cb_set:
+            raise HTTPException(status_code=400, detail=f"College {item.college_code} does not offer branch {item.branch_code}")
+
         
     # Wipe existing
     db.execute(delete(UserCollegePreference).where(UserCollegePreference.workspace_id == ws.id))
@@ -186,7 +225,7 @@ def delete_choice(pref_id: int, current_user: User = Depends(get_current_user), 
     return {"success": True, "message": "Choice removed and subsequent priorities shifted successfully."}
 
 @router.put("/{pref_id}")
-def update_choice_details(pref_id: int, category: Optional[str] = None, notes: Optional[str] = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_choice_details(pref_id: int, req: ChoiceUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     ws = current_user.workspace
     if not ws:
         raise HTTPException(status_code=404, detail="Workspace environment not initialized")
@@ -201,17 +240,18 @@ def update_choice_details(pref_id: int, category: Optional[str] = None, notes: O
     if not pref:
         raise HTTPException(status_code=404, detail="Choice item not found")
         
-    if category is not None:
-        if category not in ["Safe", "Moderate", "Ambitious"]:
+    if req.category is not None:
+        if req.category not in ["Safe", "Moderate", "Ambitious"]:
             raise HTTPException(status_code=400, detail="Invalid preference category classification")
-        pref.category = category
+        pref.category = req.category
         pref.category_override = True
         
-    if notes is not None:
-        pref.notes = notes
+    if req.notes is not None:
+        pref.notes = req.notes
         
     db.commit()
     return {"success": True, "message": "Choice metadata updated successfully."}
+
 
 # --- SNAPSHOT ROUTES ---
 @router.post("/snapshots", response_model=SnapshotResponse)

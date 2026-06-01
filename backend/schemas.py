@@ -50,8 +50,15 @@ class ChoiceItemBase(BaseModel):
     category: Optional[str] = None  # 'Safe', 'Moderate', 'Ambitious'
     notes: Optional[str] = None
 
-class ChoiceItemCreate(ChoiceItemBase):
-    pass
+class ChoiceItemCreate(BaseModel):
+    college_code: str
+    branch_code: str
+    category: Optional[str] = None
+    notes: Optional[str] = None
+
+class ChoiceUpdate(BaseModel):
+    category: Optional[str] = None
+    notes: Optional[str] = None
 
 class ChoiceItemResponse(ChoiceItemBase):
     id: int
@@ -61,6 +68,7 @@ class ChoiceItemResponse(ChoiceItemBase):
     placement_rate_pct: Optional[float] = None
     cutoff_mark_2025: Optional[float] = None
     cutoff_rank_2025: Optional[int] = None
+
 
     model_config = {
         "from_attributes": True

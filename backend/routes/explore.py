@@ -46,11 +46,11 @@ def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_cu
             CollegeBranch.branch_code == req.branch_code
         )
         
-    colleges = query.offset(req.offset).limit(req.limit).all()
+    # Fetch all filtered colleges to calculate fit_score and sort globally BEFORE pagination
+    colleges = query.all()
     
-    response = []
+    scored_colleges = []
     for c in colleges:
-        # Compute dynamic Fit Score (0-100)
         fit_score = 50.0
         
         # 1. District preference (home district matches)
@@ -73,41 +73,80 @@ def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_cu
             fit_score += min(15.0, c.avg_package_lpa * 1.5)  # max +15 points
             
         fit_score = min(100.0, max(0.0, fit_score))
+        scored_colleges.append((c, fit_score))
         
-        branch_code = req.branch_code
-        college_branch = None
-        if branch_code:
-            college_branch = db.query(CollegeBranch).filter(
-                and_(
-                    CollegeBranch.college_code == c.code,
-                    CollegeBranch.branch_code == branch_code,
-                )
-            ).first()
+    # Sort globally by fit score descending
+    scored_colleges.sort(key=lambda x: x[1], reverse=True)
+    
+    # Apply pagination bounds to the globally sorted list
+    paginated_scored = scored_colleges[req.offset : req.offset + req.limit]
+    
+    # Gather college codes to bulk fetch related models and remove N+1 queries
+    paginated_college_codes = [c.code for c, _ in paginated_scored]
+    
+    # 1. Bulk query college-branch mappings for these colleges
+    cb_mappings = db.query(CollegeBranch).filter(
+        CollegeBranch.college_code.in_(paginated_college_codes)
+    ).all()
+    cb_by_college = {}
+    for cb in cb_mappings:
+        cb_by_college.setdefault(cb.college_code, []).append(cb)
+        
+    # Map each college to its active branch code for this search
+    college_to_branch_code = {}
+    for c, _ in paginated_scored:
+        cb_list = cb_by_college.get(c.code, [])
+        if req.branch_code:
+            match = next((cb for cb in cb_list if cb.branch_code == req.branch_code), None)
+            branch_code = match.branch_code if match else req.branch_code
         else:
-            college_branch = db.query(CollegeBranch).filter(
-                CollegeBranch.college_code == c.code
-            ).order_by(CollegeBranch.branch_code.asc()).first()
-            branch_code = college_branch.branch_code if college_branch else None
-
-        branch = db.query(Branch).filter(Branch.code == branch_code).first() if branch_code else None
-        cutoff = None
-        seat_count = None
+            cb_list_sorted = sorted(cb_list, key=lambda x: x.branch_code)
+            branch_code = cb_list_sorted[0].branch_code if cb_list_sorted else None
         if branch_code:
-            cutoff = db.query(CutoffData).filter(
-                and_(
-                    CutoffData.college_code == c.code,
-                    CutoffData.branch_code == branch_code,
-                    CutoffData.community == user_community,
-                )
-            ).order_by(CutoffData.year.desc()).first()
-            seats = db.query(CommunitySeat).filter(
-                and_(
-                    CommunitySeat.college_code == c.code,
-                    CommunitySeat.branch_code == branch_code,
-                )
-            ).first()
-            if seats:
-                seat_count = community_seat_payload(seats, user_community)["available"]
+            college_to_branch_code[c.code] = branch_code
+
+    active_branch_codes = list(set(college_to_branch_code.values()))
+    
+    # 2. Bulk query branches
+    branches = db.query(Branch).filter(Branch.code.in_(active_branch_codes)).all() if active_branch_codes else []
+    branch_map = {b.code: b for b in branches}
+    
+    # 3. Bulk query cutoff data
+    cutoffs = db.query(CutoffData).filter(
+        and_(
+            CutoffData.college_code.in_(paginated_college_codes),
+            CutoffData.branch_code.in_(active_branch_codes),
+            CutoffData.community == user_community
+        )
+    ).all() if paginated_college_codes and active_branch_codes else []
+    
+    cutoff_map = {}
+    for cut in cutoffs:
+        pair = (cut.college_code, cut.branch_code)
+        existing = cutoff_map.get(pair)
+        if not existing or cut.year > existing.year:
+            cutoff_map[pair] = cut
+            
+    # 4. Bulk query community seats
+    seats = db.query(CommunitySeat).filter(
+        and_(
+            CommunitySeat.college_code.in_(paginated_college_codes),
+            CommunitySeat.branch_code.in_(active_branch_codes)
+        )
+    ).all() if paginated_college_codes and active_branch_codes else []
+    
+    seats_map = {(s.college_code, s.branch_code): s for s in seats}
+    
+    response = []
+    for c, fit_score in paginated_scored:
+        branch_code = college_to_branch_code.get(c.code)
+        branch = branch_map.get(branch_code) if branch_code else None
+        
+        cutoff = cutoff_map.get((c.code, branch_code)) if branch_code else None
+        seat_record = seats_map.get((c.code, branch_code)) if branch_code else None
+        seat_count = None
+        if seat_record:
+            seat_count = community_seat_payload(seat_record, user_community)["available"]
 
         response.append(CollegeCompactResponse(
             code=c.code,
@@ -125,9 +164,8 @@ def search_colleges(req: CollegeSearchQuery, current_user: User = Depends(get_cu
             seats=seat_count,
         ))
         
-    # Sort response by fit_score descending
-    response.sort(key=lambda x: x.fit_score, reverse=True)
     return response
+
 
 @router.get("/{college_code}", response_model=CollegeDetailResponse)
 def get_college_details(

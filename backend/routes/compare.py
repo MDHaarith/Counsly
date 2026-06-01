@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.community import resolve_user_community
 from backend.database import get_db
-from backend.models import Branch, College, CollegeCompareHistory, CutoffData, User, WorkspaceActivity
+from backend.models import Branch, College, CollegeCompareHistory, CutoffData, User, WorkspaceActivity, CollegeBranch
 from backend.routes.auth import get_current_user
 from backend.schemas import (
     CollegeCompareColumn,
@@ -27,21 +27,39 @@ def decode_selection(codes: str | None) -> List[str]:
     return [code.strip() for code in (codes or "").split(",") if code.strip()]
 
 
-def build_structural_explanation(c1: CollegeCompareColumn, c2: CollegeCompareColumn, diffs: list[str]) -> str:
-    if len(diffs) >= 2:
-        return (
-            f"{c1.name} and {c2.name} differ most on {diffs[0].lower()} and {diffs[1].lower()}, "
-            "so use fees, cutoff pressure, and travel practicality as the primary tie-breakers."
-        )
-    if diffs:
-        return (
-            f"{c1.name} and {c2.name} differ most on {diffs[0].lower()}, "
-            "so use that metric as the primary tie-breaker before locking the choice order."
-        )
-    return (
-        f"{c1.name} and {c2.name} are close on the visible metrics, so review cutoff history, fees, "
-        "and location fit before finalizing the order."
-    )
+def build_multi_structural_explanation(columns: List[CollegeCompareColumn]) -> str:
+    # 1. Fees
+    valid_fees = [(c.name, c.fee_structure_annual) for c in columns if c.fee_structure_annual]
+    fee_clause = ""
+    if valid_fees:
+        cheapest = min(valid_fees, key=lambda x: x[1])
+        fee_clause = f"{cheapest[0]} has the most affordable annual fee (₹{cheapest[1]:,})"
+
+    # 2. Placements
+    valid_placements = [(c.name, c.placement_rate_pct) for c in columns if c.placement_rate_pct]
+    placement_clause = ""
+    if valid_placements:
+        best_pl = max(valid_placements, key=lambda x: x[1])
+        placement_clause = f"{best_pl[0]} has the highest placement rate ({best_pl[1]}%)"
+
+    # 3. Autonomy
+    auto_colleges = [c.name for c in columns if c.is_autonomous]
+    autonomy_clause = ""
+    if auto_colleges:
+        autonomy_clause = f"autonomous regulation is offered at {', '.join(auto_colleges)}"
+
+    # 4. Districts
+    districts = {c.district for c in columns if c.district}
+    district_clause = f"these options span {len(districts)} districts ({', '.join(districts)})"
+
+    # Combine clauses
+    clauses = [fee_clause, placement_clause, autonomy_clause, district_clause]
+    clauses = [c for c in clauses if c]
+
+    if not clauses:
+        return "The selected options are highly competitive; compare cutoff trends and location practicality to guide your final choice order."
+
+    return "For this comparison: " + "; ".join(clauses) + ". Use these factors as tie-breakers before finalizing your choice order."
 
 
 @router.post("/", response_model=CompareResponse)
@@ -62,8 +80,18 @@ async def compare_colleges(req: CompareRequest, current_user: User = Depends(get
         college = db.query(College).filter(College.code == c_code).first()
         branch = db.query(Branch).filter(Branch.code == b_code).first()
 
-        if not college:
+        if not college or not branch:
             continue
+
+        # Validate college-branch mapping
+        cb_link = db.query(CollegeBranch).filter(
+            and_(
+                CollegeBranch.college_code == c_code,
+                CollegeBranch.branch_code == b_code
+            )
+        ).first()
+        if not cb_link:
+            raise HTTPException(status_code=400, detail=f"College {c_code} does not offer branch {b_code}")
 
         cutoff_rows = db.query(CutoffData).filter(
             and_(
@@ -98,38 +126,11 @@ async def compare_colleges(req: CompareRequest, current_user: User = Depends(get
     if len(columns) < 2:
         raise HTTPException(status_code=404, detail="Could not retrieve comparative metrics for the specified colleges.")
 
-    differences: list[str] = []
-    c1, c2 = columns[0], columns[1]
-
-    if c1.fee_structure_annual and c2.fee_structure_annual:
-        diff_fees = abs(c1.fee_structure_annual - c2.fee_structure_annual)
-        if diff_fees > 20000:
-            cheaper_college = c1.name if c1.fee_structure_annual < c2.fee_structure_annual else c2.name
-            differences.append(f"fees difference (₹{diff_fees:,}/year lower at {cheaper_college})")
-
-    if c1.placement_rate_pct and c2.placement_rate_pct:
-        diff_place = abs(c1.placement_rate_pct - c2.placement_rate_pct)
-        if diff_place > 10.0:
-            better_college = c1.name if c1.placement_rate_pct > c2.placement_rate_pct else c2.name
-            differences.append(f"placement rate difference ({round(diff_place, 1)}% higher at {better_college})")
-
-    if c1.is_autonomous != c2.is_autonomous:
-        auto_college = c1.name if c1.is_autonomous else c2.name
-        differences.append(f"autonomy status ({auto_college} offers autonomous regulation)")
-
-    if c1.district != c2.district:
-        differences.append(f"district fit ({c1.district} versus {c2.district})")
-
-    if len(differences) < 2:
-        differences.append(f"cutoff marks ({c1.cutoff_2025 or 'N/A'} vs {c2.cutoff_2025 or 'N/A'})")
-        differences.append(
-            f"accreditation status ({c1.name}: {c1.nba_accredited}, {c2.name}: {c2.nba_accredited})"
-        )
-
     return CompareResponse(
         colleges=columns,
-        explanation=build_structural_explanation(c1, c2, differences[:2]),
+        explanation=build_multi_structural_explanation(columns),
     )
+
 
 
 @router.get("/sessions", response_model=List[CompareSessionResponse])

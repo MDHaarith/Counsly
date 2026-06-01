@@ -1,3 +1,4 @@
+import { API_ENDPOINTS, choiceDetailPath, choiceSnapshotRestorePath, exploreDetailPath, withQuery } from "./api-routes.mjs";
 import { logApiError, readStoredUser, shouldLogApiError } from "./error-logging.mjs";
 
 export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/$/, "");
@@ -129,7 +130,7 @@ export async function apiRequest(path, options = {}) {
     const message = await parseFailure(response);
     if (shouldLogApiError(response.status)) {
       const user = readStoredUser();
-      await logApiError({
+      void logApiError({
         endpoint: path,
         errorType: "server_error",
         message,
@@ -266,18 +267,18 @@ export function buildWorkspaceSettings(settings = {}) {
 }
 
 export async function startSession(payload) {
-  const session = await apiRequest("/auth/session", { body: payload, method: "POST" });
+  const session = await apiRequest(API_ENDPOINTS.auth.session, { body: payload, method: "POST" });
   saveStoredToken(session.access_token);
   return session;
 }
 
 export async function fetchChoices() {
-  const rows = await apiRequest("/choices/");
+  const rows = await apiRequest(API_ENDPOINTS.choices.collection);
   return rows.map(buildChoiceRow);
 }
 
 export function reorderChoices(choices) {
-  return apiRequest("/choices/reorder", {
+  return apiRequest(API_ENDPOINTS.choices.reorder, {
     body: {
       priorities: choices.map((choice) => ({
         college_code: choice.code,
@@ -293,45 +294,51 @@ export function reorderChoices(choices) {
 
 export function updateChoice(choice) {
   return apiRequest(
-    `/choices/${choice.backendId}?category=${encodeURIComponent(choice.fitBand)}&notes=${encodeURIComponent(choice.notes)}`,
-    { method: "PUT" },
+    choiceDetailPath(choice.backendId),
+    {
+      body: {
+        category: choice.fitBand,
+        notes: choice.notes,
+      },
+      method: "PUT",
+    },
   );
 }
 
+
 export function addChoice(choice) {
-  return apiRequest("/choices/", {
+  return apiRequest(API_ENDPOINTS.choices.collection, {
     body: {
       branch_code: choice.branchCode,
       category: choice.fitBand || "Moderate",
       college_code: choice.code,
       notes: choice.notes || "",
-      priority: choice.priority || 300,
     },
     method: "POST",
   });
 }
 
 export function createChoiceSnapshot(title) {
-  return apiRequest("/choices/snapshots", { body: { title }, method: "POST" });
+  return apiRequest(API_ENDPOINTS.choices.snapshots, { body: { title }, method: "POST" });
 }
 
 export function fetchChoiceSnapshots() {
-  return apiRequest("/choices/snapshots");
+  return apiRequest(API_ENDPOINTS.choices.snapshots);
 }
 
 export function restoreChoiceSnapshot(id) {
-  return apiRequest(`/choices/snapshots/${id}/restore`, { method: "POST" });
+  return apiRequest(choiceSnapshotRestorePath(id), { method: "POST" });
 }
 
 export function uploadChoiceCsv(file) {
   const body = new FormData();
   body.append("file", file);
-  return apiRequest("/choices/upload", { body, method: "POST" });
+  return apiRequest(API_ENDPOINTS.choices.upload, { body, method: "POST" });
 }
 
 export async function searchColleges(payload) {
   const requestPayload = { ...payload, community: normalizeCommunity(payload.community || readStudentCommunity()) };
-  const rows = await apiRequest("/explore/search", { body: requestPayload, method: "POST" });
+  const rows = await apiRequest(API_ENDPOINTS.explore.search, { body: requestPayload, method: "POST" });
   const branch = requestPayload.branch_code
     ? { code: requestPayload.branch_code, name: `${requestPayload.branch_code} branch match` }
     : fallbackBranch;
@@ -342,36 +349,35 @@ export async function searchColleges(payload) {
 }
 
 export async function fetchCollegeDetail(code, community = "") {
-  const query = community ? `?community=${encodeURIComponent(community)}` : "";
-  return buildCollegeDetail(await apiRequest(`/explore/${encodeURIComponent(code)}${query}`));
+  return buildCollegeDetail(await apiRequest(exploreDetailPath(code, community)));
 }
 
 export function compareColleges(codes, branches, community = readStudentCommunity()) {
-  return apiRequest("/compare/", {
+  return apiRequest(API_ENDPOINTS.compare.collection, {
     body: { college_codes: codes, branch_codes: branches, community: normalizeCommunity(community) },
     method: "POST",
   });
 }
 
 export async function fetchCompareSessions() {
-  const sessions = await apiRequest("/compare/sessions");
+  const sessions = await apiRequest(API_ENDPOINTS.compare.sessions);
   return sessions.map(buildCompareSession);
 }
 
 export async function saveCompareSession(payload) {
-  return buildCompareSession(await apiRequest("/compare/sessions", { body: payload, method: "POST" }));
+  return buildCompareSession(await apiRequest(API_ENDPOINTS.compare.sessions, { body: payload, method: "POST" }));
 }
 
 export function runOnboarding(payload) {
-  return apiRequest("/guidance/onboarding", { body: payload, method: "POST" });
+  return apiRequest(API_ENDPOINTS.guidance.onboarding, { body: payload, method: "POST" });
 }
 
 export async function fetchWorkspaceSettings() {
-  return buildWorkspaceSettings(await apiRequest("/workspace/settings"));
+  return buildWorkspaceSettings(await apiRequest(API_ENDPOINTS.workspace.settings));
 }
 
 export async function updateWorkspaceSettings(settings) {
-  return buildWorkspaceSettings(await apiRequest("/workspace/settings", {
+  return buildWorkspaceSettings(await apiRequest(API_ENDPOINTS.workspace.settings, {
     body: {
       compact_view: settings.compactView,
       default_district: settings.defaultDistrict || null,
@@ -386,18 +392,17 @@ export async function updateWorkspaceSettings(settings) {
 // ── Maps API helpers ─────────────────────────────────────────────
 
 export function fetchMapColleges(params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return apiRequest(`/maps/colleges${qs ? `?${qs}` : ""}`);
+  return apiRequest(withQuery(API_ENDPOINTS.maps.colleges, params));
 }
 
 export function fetchTfcLocations(params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return apiRequest(`/maps/tfc-locations${qs ? `?${qs}` : ""}`);
+  return apiRequest(withQuery(API_ENDPOINTS.maps.tfcLocations, params));
 }
 
 export function verifyRollNumber(rollNumber) {
-  return apiRequest("/auth/verify-roll", {
+  return apiRequest(API_ENDPOINTS.auth.verifyRoll, {
     body: { roll_number: rollNumber },
     method: "POST",
   });
 }
+

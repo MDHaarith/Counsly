@@ -2,6 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  API_ENDPOINTS,
+  choiceDetailPath,
+  choiceSnapshotRestorePath,
+  exploreDetailPath,
+  withQuery,
+} from "../lib/api-routes.mjs";
+
+import {
   apiRequest,
   buildChoiceRow,
   buildCompareSession,
@@ -11,6 +19,18 @@ import {
   compareColleges,
   reorderChoices,
 } from "../lib/api.mjs";
+
+test("API endpoint manifest provides stable PCB connectors", () => {
+  assert.equal(API_ENDPOINTS.auth.session, "/auth/session");
+  assert.equal(API_ENDPOINTS.choices.collection, "/choices/");
+  assert.equal(API_ENDPOINTS.explore.search, "/explore/search");
+  assert.equal(API_ENDPOINTS.maps.tfcLocations, "/maps/tfc-locations");
+  assert.equal(withQuery(API_ENDPOINTS.maps.colleges, { district: "Chennai", empty: "" }), "/maps/colleges?district=Chennai");
+  assert.equal(choiceDetailPath(42), "/choices/42");
+  assert.equal(exploreDetailPath("0001", "BC"), "/explore/0001?community=BC");
+  assert.equal(choiceSnapshotRestorePath("snap/1"), "/choices/snapshots/snap%2F1/restore");
+});
+
 
 test("buildChoiceRow maps backend choice metadata into filing rows", () => {
   const choice = buildChoiceRow({
@@ -96,6 +116,9 @@ test("apiRequest logs 5xx failures to the client logging endpoint", async () => 
   };
 
   await assert.rejects(() => apiRequest("/choices/"), /Database unavailable/);
+
+  // Allow a tick for the non-blocking detached logApiError promise to complete
+  await new Promise(resolve => setTimeout(resolve, 10));
 
   assert.equal(calls.length, 2);
   assert.equal(calls[1].url, "/logging/client-error");

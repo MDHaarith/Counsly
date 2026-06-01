@@ -15,23 +15,31 @@ globalThis.window = {
   }
 };
 
-// Set the API base URL to our local test server
-process.env.NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8000";
-
-import {
-  apiRequest,
-  fetchChoices,
-  getStoredToken,
-  startSession,
-} from "../lib/api.mjs";
-
 test("Full-Stack Student Lifecycle Integration Flow", async () => {
+  // Ensure NEXT_PUBLIC_API_BASE_URL is set before importing the API client dynamically
+  if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
+    process.env.NEXT_PUBLIC_API_BASE_URL = "http://127.0.0.1:8000";
+  }
+
+  // Import API module dynamically to ensure process.env changes are fully propagated
+  const {
+    startSession,
+    runOnboarding,
+    fetchChoices,
+    addChoice,
+    createChoiceSnapshot,
+    compareColleges,
+    getStoredToken,
+  } = await import("../lib/api.mjs");
+
   // 1. Authenticate using developer Google OAuth fallback mode
   console.log("Step 1: Starting dev-auth fallback session...");
+  const uniqueEmail = `test.student-${Date.now()}@example.com`;
+  const uniqueFingerprint = `mock_fingerprint_hash_${Date.now()}`;
   const sessionResult = await startSession({
-    google_email: "test.student@example.com",
+    google_email: uniqueEmail,
     name: "Test Student",
-    device_fingerprint_hash: "mock_fingerprint_hash_abc123",
+    device_fingerprint_hash: uniqueFingerprint,
   });
 
   assert.ok(sessionResult.access_token, "Access token must be returned.");
@@ -40,15 +48,12 @@ test("Full-Stack Student Lifecycle Integration Flow", async () => {
 
   // 2. Submit onboarding marks (maths/physics/chemistry) -> Confirm eligibility
   console.log("Step 2: Submitting onboarding marks...");
-  const onboardingResult = await apiRequest("/guidance/onboarding", {
-    method: "POST",
-    body: {
-      maths: 98,
-      physics: 48,
-      chemistry: 47,
-      preferred_branches: ["CS", "IT"],
-      default_district: "Chennai",
-    },
+  const onboardingResult = await runOnboarding({
+    maths: 98,
+    physics: 48,
+    chemistry: 47,
+    preferred_branches: ["CS", "IT"],
+    default_district: "Chennai",
   });
 
   assert.equal(onboardingResult.eligible, true, "Student should be eligible with high marks.");
@@ -61,16 +66,15 @@ test("Full-Stack Student Lifecycle Integration Flow", async () => {
   const countBefore = initialChoices.length;
   console.log(`✓ Initial choices loaded. Count: ${countBefore}`);
 
+  // 4. File a choice preference using public connector
+  console.log("Step 4: Filing a choice preference...");
   try {
-    const addResult = await apiRequest("/choices/", {
-      method: "POST",
-      body: {
-        college_code: "1",
-        branch_code: "AD",
-        priority: 1,
-        category: "Safe",
-        notes: "Top option",
-      },
+    const addResult = await addChoice({
+      code: "1",
+      branchCode: "CS",
+      priority: 1,
+      fitBand: "Safe",
+      notes: "Top option",
     });
     assert.ok(addResult.id, "Newly created choice preference must have an ID.");
   } catch (err) {
@@ -83,31 +87,20 @@ test("Full-Stack Student Lifecycle Integration Flow", async () => {
   console.log("Step 5: Verifying choice list updates...");
   const updatedChoices = await fetchChoices();
   assert.equal(updatedChoices.length, countBefore + 1, "Choice count should have incremented.");
-  const addedChoice = updatedChoices.find(c => c.branchCode === "AD");
-  assert.ok(addedChoice, "AIDS choice must exist in list.");
+  const addedChoice = updatedChoices.find(c => c.branchCode === "CS");
+  assert.ok(addedChoice, "CS choice must exist in list.");
   console.log("✓ Choices list verification passed.");
 
-  // 6. Test Snapshots flow (saving and restoring)
+  // 6. Test Snapshots flow (saving and restoring) using public snapshot connector
   console.log("Step 6: Creating a shortlist snapshot...");
-  const snapshotResult = await apiRequest("/choices/snapshots", {
-    method: "POST",
-    body: {
-      title: "My First Safe List",
-    },
-  });
+  const snapshotResult = await createChoiceSnapshot("My First Safe List");
   assert.ok(snapshotResult.id, "Snapshot ID must be generated.");
   assert.equal(snapshotResult.title, "My First Safe List");
   console.log("✓ Shortlist snapshot successfully created.");
 
-  // 7. Confirm deterministic compare remains available in the free student workflow.
+  // 7. Confirm deterministic compare remains available in the free student workflow using compare colleges connector
   console.log("Step 7: Running deterministic college compare...");
-  const compareResult = await apiRequest("/compare/", {
-    method: "POST",
-    body: {
-      college_codes: ["1", "4"],
-      branch_codes: ["AD", "CS"],
-    },
-  });
+  const compareResult = await compareColleges(["1", "4"], ["CS", "CS"]);
   assert.ok(compareResult.explanation, "Compare explanation must be generated.");
   assert.ok(compareResult.colleges.length >= 2, "Compare must return at least two colleges.");
   console.log("✓ Deterministic compare completed.");

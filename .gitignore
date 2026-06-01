@@ -43,3 +43,6 @@ supabase_db/Data_Extractor/**/output/
 Thumbs.db
 .vercel
 .antigravitycli
+
+# TypeScript
+*.tsbuildinfo

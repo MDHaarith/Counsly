@@ -1,3 +1,5 @@
+import { API_ENDPOINTS } from "./api-routes.mjs";
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -151,15 +153,22 @@ export async function buildClientErrorLog({
 export async function submitErrorLog(payload, fetcher = globalThis.fetch, baseUrl = "") {
   if (typeof fetcher !== "function") return;
   try {
-    await fetcher(`${baseUrl}/logging/client-error`, {
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 2000) : null;
+
+    await fetcher(`${baseUrl}${API_ENDPOINTS.logging.clientError}`, {
       body: JSON.stringify(payload),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      ...(controller ? { signal: controller.signal } : {}),
     });
+
+    if (timeoutId) clearTimeout(timeoutId);
   } catch {
     // Error reporting must never break the user flow.
   }
 }
+
 
 export async function logApiError(input, options = {}) {
   const payload = await buildApiErrorLog(input);
