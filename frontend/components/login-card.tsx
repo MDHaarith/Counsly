@@ -5,10 +5,12 @@ import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { useApp } from "@/app/AppContext";
-import { Badge, Surface } from "@/components/ui";
+import { Surface } from "@/components/ui";
+import { hasRealGoogleClientId, shouldRenderManualLoginForm } from "@/lib/auth-config.mjs";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
-const hasRealGoogleClient = GOOGLE_CLIENT_ID.length > 10 && GOOGLE_CLIENT_ID !== "mock-dev-client-id";
+const hasRealGoogleClient = hasRealGoogleClientId(GOOGLE_CLIENT_ID);
+const showManualLoginForm = shouldRenderManualLoginForm(GOOGLE_CLIENT_ID);
 
 declare global {
   interface Window {
@@ -100,65 +102,72 @@ export function LoginCard({ compact = false }: { compact?: boolean }) {
         <div className="space-y-2">
           <h2 className="font-display text-3xl leading-tight text-counsly-ink">Continue your counselling workspace</h2>
           <p className="text-sm leading-6 text-counsly-muted">
-            Enter your name and Google email to pick up your shortlists, snapshots, and compare sessions — no password needed.
+            {hasRealGoogleClient
+              ? "Use Google sign-in to pick up your shortlists, snapshots, and compare sessions — no password needed."
+              : showManualLoginForm
+                ? "Manual name/email login is development-only. Enter any name and email here only when the Google client ID is missing or set to a dev/mock value."
+                : "Google sign-in is required, but the configured Google client ID is not valid. Contact support before continuing."}
           </p>
         </div>
 
-        <form className="space-y-4" onSubmit={submit}>
-          <div className="space-y-3">
-            <label className="field-label">
-              Full name
-              <input
-                className="field"
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Mohamed Haarith"
-                required
-                value={name}
-              />
-            </label>
-            <label className="field-label">
-              Google email
-              <input
-                className="field"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="student@gmail.com"
-                required
-                type="email"
-                value={email}
-              />
-            </label>
-          </div>
-
-          <button className="button-primary w-full" disabled={busy} type="submit">
-            {busy ? (
-              <span className="flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Opening workspace...
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                Continue to dashboard <ArrowRight className="h-4 w-4" />
-              </span>
-            )}
-          </button>
-        </form>
-
         {hasRealGoogleClient ? (
-          <>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-counsly-line" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-counsly-canvas px-3 text-counsly-muted">or sign in with Google</span>
-              </div>
-            </div>
+          <div className="space-y-3">
             <div className="flex justify-center" ref={googleButtonRef} />
+            <p className="text-center text-xs leading-5 text-counsly-muted">
+              Production access uses Google identity verification before opening your workspace.
+            </p>
+          </div>
+        ) : showManualLoginForm ? (
+          <>
+            <form className="space-y-4" onSubmit={submit}>
+              <div className="space-y-3">
+                <label className="field-label">
+                  Full name
+                  <input
+                    className="field"
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Mohamed Haarith"
+                    required
+                    value={name}
+                  />
+                </label>
+                <label className="field-label">
+                  Google email
+                  <input
+                    className="field"
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="student@gmail.com"
+                    required
+                    type="email"
+                    value={email}
+                  />
+                </label>
+              </div>
+
+              <button className="button-primary w-full" disabled={busy} type="submit">
+                {busy ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Opening workspace...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    Continue to dashboard <ArrowRight className="h-4 w-4" />
+                  </span>
+                )}
+              </button>
+            </form>
+
+            <div className="rounded-lg border border-counsly-line bg-counsly-soft/50 px-4 py-3">
+              <p className="text-xs leading-5 text-counsly-muted">
+                <span className="font-medium text-counsly-ink">Dev mode only:</span> Manual login is available only for local development or mock Google-client setups. Production uses Google sign-in as the primary authentication action.
+              </p>
+            </div>
           </>
         ) : (
-          <div className="rounded-lg border border-counsly-line bg-counsly-soft/50 px-4 py-3">
-            <p className="text-xs leading-5 text-counsly-muted">
-              <span className="font-medium text-counsly-ink">Dev mode:</span> Enter any name and email above to start. In production, Google sign-in verifies your identity before workspace access.
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-600">
+              Authentication is unavailable because the Google client ID is neither empty nor a recognized development/mock value nor a real Google OAuth client ID.
             </p>
           </div>
         )}
