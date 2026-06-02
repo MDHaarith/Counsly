@@ -17,6 +17,7 @@ import {
 import Script from "next/script";
 
 import { Badge, PageHeader, Surface } from "@/components/ui";
+import { FeatureGate } from "@/components/feature-gate";
 import { fetchMapColleges, fetchTfcLocations } from "@/lib/api.mjs";
 import {
   buildCollegeDirectionsUrl,
@@ -200,7 +201,7 @@ function TransitPointCard({
   );
 }
 
-export default function MapsPage() {
+function MapsContent() {
   const [activeTab, setActiveTab] = useState<TabId>("colleges");
   const [viewMode, setViewMode] = useState<MapViewMode>("map");
   const [collegeRows, setCollegeRows] = useState<LocationRow[]>([]);
@@ -799,5 +800,13 @@ export default function MapsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MapsPage() {
+  return (
+    <FeatureGate>
+      <MapsContent />
+    </FeatureGate>
   );
 }

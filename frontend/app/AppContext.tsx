@@ -19,6 +19,7 @@ export interface UserProfile {
 export interface PhaseContextType {
   broadcastBanner: string;
   user: UserProfile | null;
+  userHydrated: boolean;
   login: (email: string, name: string, googleIdToken?: string) => Promise<UserProfile>;
   logout: () => void;
   refreshUser: () => void;
@@ -64,12 +65,14 @@ export function useApp() {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [broadcastBanner, setBroadcastBanner] = useState("Round 1 choice filing is currently active. Review choices, compare targets, and check the round tracker before locking decisions.");
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [userHydrated, setUserHydrated] = useState(false);
 
   useEffect(() => {
     const savedUser = readStoredUser();
     if (savedUser) {
       setUser(savedUser);
     }
+    setUserHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -113,6 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       broadcastBanner,
       user,
+      userHydrated,
       login,
       logout,
       refreshUser,

@@ -7,6 +7,7 @@ import { ArrowLeft, Bus, GitCompareArrows, MapPinned, TrainFront, User, Sliders 
 
 import { useApp } from "@/app/AppContext";
 import { Badge, PageHeader, Surface } from "@/components/ui";
+import { FeatureGate } from "@/components/feature-gate";
 import { choiceWriteDestination } from "@/lib/access.mjs";
 import { addChoice, fetchCollegeDetail } from "@/lib/api.mjs";
 import { trackFunnelEvent } from "@/lib/analytics.mjs";
@@ -14,7 +15,7 @@ import { currency, getCollege, trendRows, cleanCollegeName } from "@/lib/product
 
 const tabs = ["Overview", "Cutoffs", "Fees & Facilities", "Placements", "Nearby"] as const;
 
-export default function CollegeInsightPage({ params }: { params: { code: string } }) {
+function CollegeInsightContent({ params }: { params: { code: string } }) {
   const preview = useMemo(() => getCollege(params.code), [params.code]);
   const { user } = useApp();
   const router = useRouter();
@@ -579,5 +580,13 @@ export default function CollegeInsightPage({ params }: { params: { code: string 
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CollegeInsightPage(props: { params: { code: string } }) {
+  return (
+    <FeatureGate>
+      <CollegeInsightContent {...props} />
+    </FeatureGate>
   );
 }

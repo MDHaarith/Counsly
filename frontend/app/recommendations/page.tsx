@@ -7,12 +7,13 @@ import { ArrowRight, BookmarkPlus, GitCompareArrows, Search } from "lucide-react
 
 import { useApp } from "@/app/AppContext";
 import { Badge, PageHeader, Surface, EmptyState, StatusToast } from "@/components/ui";
+import { FeatureGate } from "@/components/feature-gate";
 import { choiceWriteDestination } from "@/lib/access.mjs";
 import { addChoice, searchColleges } from "@/lib/api.mjs";
 import { trackFunnelEvent } from "@/lib/analytics.mjs";
 import { branches, collegeCatalog, currency, districts, toneForBand, cleanCollegeName } from "@/lib/product";
 
-export default function RecommendationsPage() {
+function RecommendationsContent() {
   const { user } = useApp();
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -52,7 +53,7 @@ export default function RecommendationsPage() {
         setRows(collegeCatalog);
         showToast("Recommendations offline. Using local catalog.", "default");
       });
-  }, [branch, district, query]);
+  }, [branch, district, query, user]);
 
   const visible = rows;
 
@@ -181,5 +182,13 @@ export default function RecommendationsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function RecommendationsPage() {
+  return (
+    <FeatureGate>
+      <RecommendationsContent />
+    </FeatureGate>
   );
 }

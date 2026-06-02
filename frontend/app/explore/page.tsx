@@ -5,10 +5,11 @@ import Link from "next/link";
 import { ArrowRight, Search, ShieldAlert } from "lucide-react";
 
 import { Badge, PageHeader, Surface, EmptyState, StatusToast } from "@/components/ui";
+import { FeatureGate } from "@/components/feature-gate";
 import { searchColleges } from "@/lib/api.mjs";
 import { branches, collegeCatalog, districts, toneForBand, cleanCollegeName } from "@/lib/product";
 
-export default function ExplorePage() {
+function ExploreContent() {
   const [search, setSearch] = useState("");
   const [district, setDistrict] = useState("");
   const [branch, setBranch] = useState("");
@@ -200,5 +201,13 @@ export default function ExplorePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <FeatureGate>
+      <ExploreContent />
+    </FeatureGate>
   );
 }

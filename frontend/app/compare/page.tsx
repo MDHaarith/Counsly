@@ -7,6 +7,7 @@ import { ArrowLeft, Sparkles, X, GitCompareArrows } from "lucide-react";
 
 import { useApp } from "@/app/AppContext";
 import { Badge, PageHeader, Surface, EmptyState, StatusToast } from "@/components/ui";
+import { FeatureGate } from "@/components/feature-gate";
 import { compareColleges, fetchCompareSessions, saveCompareSession, fetchMapColleges } from "@/lib/api.mjs";
 import { collegeCatalog, currency, cleanCollegeName } from "@/lib/product";
 
@@ -307,8 +308,10 @@ function CompareInner() {
 
 export default function ComparePage() {
   return (
-    <Suspense fallback={<p className="text-sm text-counsly-muted">Loading compare...</p>}>
-      <CompareInner />
-    </Suspense>
+    <FeatureGate>
+      <Suspense fallback={<p className="text-sm text-counsly-muted">Loading compare...</p>}>
+        <CompareInner />
+      </Suspense>
+    </FeatureGate>
   );
 }

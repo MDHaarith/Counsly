@@ -14,6 +14,7 @@ import {
 
 import { useApp } from "@/app/AppContext";
 import { Badge, PageHeader, Surface, StatusToast } from "@/components/ui";
+import { FeatureGate } from "@/components/feature-gate";
 import { fetchWorkspaceSettings, updateWorkspaceSettings, verifyRollNumber } from "@/lib/api.mjs";
 import { branches, districts } from "@/lib/product";
 
@@ -36,7 +37,7 @@ function clampNumber(value: string, max: number) {
   return Math.min(max, Math.max(0, parsed));
 }
 
-export default function ProfileEditPage() {
+function ProfileEditContent() {
   const { user } = useApp();
   const [saved, setSaved] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" | "default" } | null>(null);
@@ -492,5 +493,13 @@ export default function ProfileEditPage() {
         </aside>
       </div>
     </div>
+  );
+}
+
+export default function ProfileEditPage() {
+  return (
+    <FeatureGate>
+      <ProfileEditContent />
+    </FeatureGate>
   );
 }

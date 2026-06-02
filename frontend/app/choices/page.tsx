@@ -43,7 +43,7 @@ function resequence(rows: ChoiceRow[]) {
   return rows.map((row, index) => ({ ...row, priority: index + 1 }));
 }
 
-export default function ChoicesPage() {
+function ChoicesContent() {
   const { user } = useApp();
   const [choices, setChoices] = useState<ChoiceRow[]>(() =>
     choiceDrafts.map((choice) => ({ ...choice, id: `${choice.code}-${choice.branchCode}`, manual: false })),
@@ -271,8 +271,7 @@ export default function ChoicesPage() {
   };
 
   return (
-    <FeatureGate>
-      <div className="space-y-8 relative">
+    <div className="space-y-8 relative">
         {toast && (
           <div className="fixed bottom-24 right-6 z-50 animate-slide-up">
             <StatusToast message={toast.message} tone={toast.tone} />
@@ -456,6 +455,13 @@ export default function ChoicesPage() {
           </button>
         </div>
       </div>
+  );
+}
+
+export default function ChoicesPage() {
+  return (
+    <FeatureGate>
+      <ChoicesContent />
     </FeatureGate>
   );
 }
