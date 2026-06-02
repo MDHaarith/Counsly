@@ -8,6 +8,7 @@ import confetti from "canvas-confetti";
 
 import { runOnboarding, verifyRollNumber } from "@/lib/api.mjs";
 import { trackFunnelEvent } from "@/lib/analytics.mjs";
+import { submitStep1Eligibility } from "@/lib/onboarding-flow.mjs";
 import { Surface, Badge } from "@/components/ui";
 
 export function OnboardingWizard({ initialStep = 1 }: { initialStep?: number }) {
@@ -28,6 +29,7 @@ export function OnboardingWizard({ initialStep = 1 }: { initialStep?: number }) 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [denied, setDenied] = useState(false);
+  const [backendOnboardingConfirmed, setBackendOnboardingConfirmed] = useState(false);
   const trackedStart = useRef(false);
 
   useEffect(() => {
@@ -91,16 +93,22 @@ export function OnboardingWizard({ initialStep = 1 }: { initialStep?: number }) 
     }
 
     setLoading(true);
+    setBackendOnboardingConfirmed(false);
     try {
-      await runOnboarding({
+      const result = await submitStep1Eligibility({
         maths: m,
         physics: p,
         chemistry: c,
-        preferred_branches: [],
+        runOnboarding,
       });
-      setStep(2);
-    } catch {
-      setStep(2);
+
+      if (result.backendConfirmed && result.nextStep === 2) {
+        setBackendOnboardingConfirmed(true);
+        setStep(2);
+      } else {
+        setErrorMsg(result.errorMsg);
+        setStep(1);
+      }
     } finally {
       setLoading(false);
     }
@@ -109,6 +117,13 @@ export function OnboardingWizard({ initialStep = 1 }: { initialStep?: number }) 
   const handleCompleteOnboarding = () => {
     setLoading(true);
     setTimeout(() => {
+      if (!backendOnboardingConfirmed) {
+        setErrorMsg("Backend onboarding confirmation is required before completing setup. Please verify eligibility again.");
+        setStep(1);
+        setLoading(false);
+        return;
+      }
+
       localStorage.setItem(
         "counsly_student_context",
         JSON.stringify({
