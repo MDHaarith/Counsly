@@ -32,14 +32,27 @@ function readStoredUser() {
   if (typeof window === "undefined") return null;
 
   const sessionValue = window.sessionStorage?.getItem(STORED_USER_KEY);
-  if (sessionValue) return JSON.parse(sessionValue);
+  if (sessionValue) {
+    try {
+      return JSON.parse(sessionValue);
+    } catch {
+      clearStoredUser();
+      return null;
+    }
+  }
 
   const legacyValue = window.localStorage?.getItem(STORED_USER_KEY);
   if (!legacyValue) return null;
 
-  window.sessionStorage?.setItem(STORED_USER_KEY, legacyValue);
-  window.localStorage?.removeItem(STORED_USER_KEY);
-  return JSON.parse(legacyValue);
+  try {
+    const parsedUser = JSON.parse(legacyValue);
+    window.sessionStorage?.setItem(STORED_USER_KEY, legacyValue);
+    window.localStorage?.removeItem(STORED_USER_KEY);
+    return parsedUser;
+  } catch {
+    clearStoredUser();
+    return null;
+  }
 }
 
 function writeStoredUser(profile: UserProfile) {
