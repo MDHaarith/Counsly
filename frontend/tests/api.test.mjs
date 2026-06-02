@@ -117,8 +117,10 @@ test("apiRequest logs 5xx failures to the client logging endpoint", async () => 
 
   await assert.rejects(() => apiRequest("/choices/"), /Database unavailable/);
 
-  // Allow a tick for the non-blocking detached logApiError promise to complete
-  await new Promise(resolve => setTimeout(resolve, 10));
+  // Allow the non-blocking detached logApiError promise to complete without racing async hashing.
+  for (let attempt = 0; calls.length < 2 && attempt < 20; attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
 
   assert.equal(calls.length, 2);
   assert.equal(calls[1].url, "/logging/client-error");
